@@ -1,0 +1,129 @@
+enum RunnerState {
+  IDLE
+  IDLE_WITH_SKIPPED_TASKS
+  RUNNING
+  STOPPED_AFTER_ERROR
+}
+
+enum AiProcessingStep {
+  CLEANUP
+  SPLIT
+  TRANSLATION
+  VOCABULARY
+}
+
+enum AiThinkingMode {
+  BUDGET
+  LEVEL
+}
+
+enum AiThinkingLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+type RunnerTask {
+  type: String!
+  bookPath: String
+  pagePath: String
+  label: String!
+}
+
+type RunnerLastError {
+  message: String!
+  occurredAt: DateTime!
+  task: RunnerTask
+}
+
+type RunnerStatus {
+  state: RunnerState!
+  runId: String
+  startedAt: DateTime
+  finishedAt: DateTime
+  currentTask: RunnerTask
+  processedTaskCount: Int!
+  skippedTaskCount: Int!
+  stopRequested: Boolean!
+  lastError: RunnerLastError
+  lastMessage: String
+  exhaustedModelIds: [String!]!
+}
+
+type RunnerOperationLogParams {
+  bookPath: String
+  pagePath: String
+  label: String!
+}
+
+type RunnerOperationLogResult {
+  status: String!
+  durationMs: Int!
+  message: String
+}
+
+type RunnerOperationLogEntry {
+  ts: DateTime!
+  phase: String!
+  runId: String!
+  operation: String!
+  model: String
+  params: RunnerOperationLogParams
+  result: RunnerOperationLogResult
+}
+
+type AiModelOption {
+  id: ID!
+  thinkingMode: AiThinkingMode!
+  requestsPerMinute: Int!
+}
+
+type AiProcessingStepConfig {
+  step: AiProcessingStep!
+  models: [AiProcessingStepModelConfig!]!
+}
+
+type AiProcessingStepModelConfig {
+  modelId: String!
+  thinkingLevel: AiThinkingLevel
+}
+
+type AiProcessingConfig {
+  modelOptions: [AiModelOption!]!
+  steps: [AiProcessingStepConfig!]!
+}
+
+input AiModelOptionInput {
+  id: ID!
+  thinkingMode: AiThinkingMode!
+  requestsPerMinute: Int!
+}
+
+input AiProcessingStepConfigInput {
+  step: AiProcessingStep!
+  models: [AiProcessingStepModelConfigInput!]!
+}
+
+input AiProcessingStepModelConfigInput {
+  modelId: String!
+  thinkingLevel: AiThinkingLevel
+}
+
+input UpdateAiProcessingConfigInput {
+  modelOptions: [AiModelOptionInput!]!
+  steps: [AiProcessingStepConfigInput!]!
+}
+
+extend type Query {
+  aiProcessingConfig: AiProcessingConfig!
+  runnerOperationLog(limit: Int): [RunnerOperationLogEntry!]!
+  runnerStatus: RunnerStatus!
+}
+
+extend type Mutation {
+  startRunner: RunnerStatus!
+  requestRunnerStop: RunnerStatus!
+  updateAiProcessingConfig(
+    input: UpdateAiProcessingConfigInput!
+  ): AiProcessingConfig!
+}

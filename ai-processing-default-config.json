@@ -1,0 +1,71 @@
+{
+  "modelOptions": [
+    {
+      "id": "gemini-2.5-flash",
+      "thinkingMode": "BUDGET",
+      "requestsPerMinute": 5
+    },
+    {
+      "id": "gemini-2.5-flash-lite",
+      "thinkingMode": "BUDGET",
+      "requestsPerMinute": 5
+    },
+    {
+      "id": "gemini-3-flash-preview",
+      "thinkingMode": "LEVEL",
+      "requestsPerMinute": 5
+    },
+    {
+      "id": "gemini-3.1-flash-lite",
+      "thinkingMode": "LEVEL",
+      "requestsPerMinute": 15
+    },
+    {
+      "id": "gemini-3.5-flash",
+      "thinkingMode": "LEVEL",
+      "requestsPerMinute": 5
+    }
+  ],
+  "steps": {
+    "cleanup": {
+      "models": [
+        {
+          "modelId": "gemini-3.1-flash-lite",
+          "thinkingLevel": "HIGH"
+        }
+      ]
+    },
+    "split": {
+      "models": [
+        {
+          "modelId": "gemini-3.1-flash-lite",
+          "thinkingLevel": "HIGH"
+        }
+      ]
+    },
+    "translation": {
+      "models": [
+        {
+          "modelId": "gemini-3.5-flash",
+          "thinkingLevel": "HIGH"
+        },
+        {
+          "modelId": "gemini-2.5-flash",
+          "thinkingLevel": null
+        },
+        {
+          "modelId": "gemini-3.1-flash-lite",
+          "thinkingLevel": "HIGH"
+        }
+      ]
+    },
+    "vocabulary": {
+      "models": [
+        {
+          "modelId": "gemini-3.1-flash-lite",
+          "thinkingLevel": "HIGH"
+        }
+      ]
+    }
+  }
+}

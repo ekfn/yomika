@@ -1,0 +1,47 @@
+{
+  "name": "yomika",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22 <27"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "build": "pnpm --filter @yomika/shared build && pnpm --filter @yomika/api build && pnpm --filter @yomika/client-app build",
+    "start": "concurrently -k -n mlx,ocr,api \"pnpm ocr:mlx:start\" \"pnpm ocr:paddle:start\" \"pnpm start:api\"",
+    "start:api": "NODE_ENV=production dotenv -e .env -- node apps/api/dist/main.js",
+    "ocr:setup": "python -m venv .venv_paddleocr_vl && ./.venv_paddleocr_vl/bin/python -m pip install --upgrade pip && ./.venv_paddleocr_vl/bin/python -m pip install paddlepaddle==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/ && ./.venv_paddleocr_vl/bin/python -m pip install -r infra/paddleocr-vl/requirements.txt",
+    "ocr:mlx:start": "./.venv_paddleocr_vl/bin/python -m uvicorn mlx_vlm.server:app --host 127.0.0.1 --port 43103",
+    "ocr:paddle:start": "dotenv -e .env -- ./.venv_paddleocr_vl/bin/python -m uvicorn --app-dir infra/paddleocr-vl app:app --host 127.0.0.1 --port 43102",
+    "dev:api": "dotenv -e .env -- pnpm --filter @yomika/api dev",
+    "dev:client-app": "pnpm --filter @yomika/client-app dev",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "pnpm --filter @yomika/shared lint && pnpm --filter @yomika/api lint && pnpm --filter @yomika/client-app lint",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck",
+    "typecheck": "pnpm --filter @yomika/shared typecheck && pnpm --filter @yomika/api typecheck && pnpm --filter @yomika/client-app typecheck"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx,json,md,css,graphql,yml,yaml}": "prettier --write",
+    "*.{ts,tsx}": "eslint --config packages/eslint-config/index.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@graphql-codegen/cli": "6.3.0",
+    "@graphql-codegen/client-preset": "5.1.0",
+    "@graphql-codegen/schema-ast": "4.1.0",
+    "@graphql-codegen/typescript": "5.0.9",
+    "@graphql-codegen/typescript-resolvers": "5.1.3",
+    "concurrently": "9.2.1",
+    "dotenv-cli": "11.0.0",
+    "eslint": "10.2.1",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
+    "prettier": "3.8.3",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.58.2"
+  }
+}

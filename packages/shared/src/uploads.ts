@@ -1,0 +1,19 @@
+const BYTES_PER_MEGABYTE = 1024 * 1024;
+
+export const UPLOAD_ALLOWED_IMAGE_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
+export const UPLOAD_MAX_FILE_SIZE_BYTES = 24 * BYTES_PER_MEGABYTE;
+
+export const OCR_BOOK_ALLOWED_MIME_TYPES = ["application/pdf"] as const;
+
+export const OCR_BOOK_UPLOAD_MAX_FILE_SIZE_BYTES = 48 * BYTES_PER_MEGABYTE;
+
+export function formatUploadFileSize(bytes: number) {
+  const megabytes = bytes / BYTES_PER_MEGABYTE;
+
+  return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(1)} MB`;
+}

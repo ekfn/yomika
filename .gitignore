@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+
+# Package manager caches
+.npm/
+.pnpm-store/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Build output
+dist/
+build/
+out/
+storybook-static/
+.next/
+.nuxt/
+.output/
+.cache/
+.parcel-cache/
+.vite/
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Runtime files
+pids/
+*.pid
+*.seed
+*.pid.lock
+storage/
+.venv_paddleocr_vl/
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Agents
+AGENTS.md
+.agent-skills
+
+# ESLint / Prettier / tooling caches
+.eslintcache
+.stylelintcache
+
+# local database
+*.sqlite
+*.sqlite3
+prisma/dev.db
+
+
+apps/client-app/src/graphql/generated/
+/library/
+/runtime/

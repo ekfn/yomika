@@ -1,0 +1,96 @@
+fragment RunnerStatusFields on RunnerStatus {
+  state
+  runId
+  startedAt
+  finishedAt
+  processedTaskCount
+  skippedTaskCount
+  stopRequested
+  exhaustedModelIds
+  lastError {
+    message
+    occurredAt
+    task {
+      type
+      bookPath
+      pagePath
+      label
+    }
+  }
+  lastMessage
+  currentTask {
+    type
+    bookPath
+    pagePath
+    label
+  }
+}
+
+fragment RunnerOperationLogEntryFields on RunnerOperationLogEntry {
+  ts
+  phase
+  runId
+  operation
+  model
+  params {
+    bookPath
+    pagePath
+    label
+  }
+  result {
+    status
+    durationMs
+    message
+  }
+}
+
+fragment AiProcessingConfigFields on AiProcessingConfig {
+  modelOptions {
+    id
+    thinkingMode
+    requestsPerMinute
+  }
+  steps {
+    step
+    models {
+      modelId
+      thinkingLevel
+    }
+  }
+}
+
+query RunnerStatus {
+  runnerStatus {
+    ...RunnerStatusFields
+  }
+}
+
+query RunnerOperationLog($limit: Int) {
+  runnerOperationLog(limit: $limit) {
+    ...RunnerOperationLogEntryFields
+  }
+}
+
+query AiProcessingConfig {
+  aiProcessingConfig {
+    ...AiProcessingConfigFields
+  }
+}
+
+mutation StartRunner {
+  startRunner {
+    ...RunnerStatusFields
+  }
+}
+
+mutation RequestRunnerStop {
+  requestRunnerStop {
+    ...RunnerStatusFields
+  }
+}
+
+mutation UpdateAiProcessingConfig($input: UpdateAiProcessingConfigInput!) {
+  updateAiProcessingConfig(input: $input) {
+    ...AiProcessingConfigFields
+  }
+}

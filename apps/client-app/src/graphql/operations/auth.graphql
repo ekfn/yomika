@@ -1,0 +1,17 @@
+query CurrentUser {
+  currentUser {
+    id
+    label
+  }
+}
+
+mutation Login($input: LoginInput!) {
+  login(input: $input) {
+    id
+    label
+  }
+}
+
+mutation Logout {
+  logout
+}

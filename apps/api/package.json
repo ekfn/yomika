@@ -1,0 +1,43 @@
+{
+  "name": "@yomika/api",
+  "private": true,
+  "scripts": {
+    "build": "nest build --path tsconfig.json",
+    "dev": "nest start --watch --path tsconfig.json",
+    "lint": "eslint --config ../../packages/eslint-config/index.js \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@apollo/server": "5.5.0",
+    "@as-integrations/express5": "1.1.2",
+    "@google/genai": "2.8.0",
+    "@nestjs/apollo": "13.2.5",
+    "@nestjs/common": "11.1.19",
+    "@nestjs/core": "11.1.19",
+    "@nestjs/graphql": "13.2.5",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-express": "11.1.19",
+    "@nestjs/throttler": "6.5.0",
+    "@yomika/shared": "workspace:*",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "cheerio": "1.1.2",
+    "cookie-parser": "1.4.7",
+    "graphql": "16.13.2",
+    "multer": "2.1.1",
+    "pdf-to-png-converter": "3.7.1",
+    "pdfjs-dist": "5.7.284",
+    "reflect-metadata": "0.2.2",
+    "remeda": "^2.0.0",
+    "rxjs": "7.8.2",
+    "sharp": "0.34.2",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.21",
+    "@types/cookie-parser": "1.4.10",
+    "@types/express": "5.0.4",
+    "@types/multer": "2.1.0",
+    "@types/node": "24.10.1"
+  }
+}

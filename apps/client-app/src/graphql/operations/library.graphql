@@ -1,0 +1,226 @@
+fragment BookSettingsFields on BookSettings {
+  translationSourceLanguages
+  translationTargetLanguage
+  aiProcessingEnabled
+  vocabularyEnabled
+}
+
+fragment PageSettingsFields on PageSettings {
+  translationSourceLanguages
+  translationTargetLanguage
+  aiProcessingEnabled
+  vocabularyEnabled
+}
+
+fragment PageEffectiveSettingsFields on PageEffectiveSettings {
+  translationSourceLanguages
+  translationTargetLanguage
+  aiProcessingEnabled
+  vocabularyEnabled
+}
+
+fragment FolderFields on Folder {
+  path
+}
+
+fragment PageListFields on Page {
+  path
+  bookPath
+  pageNumber
+  sourceImagePreviewUrl
+  sourceImagePreviewWidthPx
+  sourceImagePreviewHeightPx
+  ocrStatus
+  aiProcessingStatus
+  settings {
+    ...PageSettingsFields
+  }
+  effectiveSettings {
+    ...PageEffectiveSettingsFields
+  }
+  createdAt
+  updatedAt
+}
+
+fragment PageContentFields on Page {
+  ...PageListFields
+  sourceImageUrl
+  sourceImageWidthPx
+  sourceImageHeightPx
+  ocrRawJson
+  blocks {
+    id
+    orderIndex
+    label
+    bboxX1
+    bboxY1
+    bboxX2
+    bboxY2
+    content
+    segments {
+      id
+      orderIndex
+      sourceText
+      languages
+      translation
+      textWithReading
+      vocabulary {
+        text
+        translation
+      }
+    }
+  }
+}
+
+fragment BookListFields on Book {
+  path
+  sourcePdfUrl
+  sourcePageCount
+  importStatus
+  importedPageCount
+  pageCount
+  settings {
+    ...BookSettingsFields
+  }
+  firstPage {
+    ...PageListFields
+  }
+  createdAt
+  updatedAt
+}
+
+fragment LibraryFolderContentsFields on LibraryFolderContents {
+  parentPath
+  folders {
+    ...FolderFields
+  }
+  books {
+    ...BookListFields
+    pages {
+      ...PageListFields
+    }
+  }
+  pages {
+    ...PageListFields
+  }
+}
+
+query LibrarySettingsDefaults {
+  librarySettingsDefaults {
+    translationSourceLanguages
+    translationTargetLanguage
+    aiProcessingEnabled
+    vocabularyEnabled
+  }
+}
+
+query Folder($path: String!) {
+  folder(path: $path) {
+    ...FolderFields
+  }
+}
+
+query Book($path: String!) {
+  book(path: $path) {
+    ...BookListFields
+    pages {
+      ...PageContentFields
+    }
+  }
+}
+
+query LibraryFolderContents($parentPath: String) {
+  libraryFolderContents(parentPath: $parentPath) {
+    ...LibraryFolderContentsFields
+  }
+}
+
+query LibraryFolderContentsBatch($input: [LibraryFolderContentsInput!]!) {
+  libraryFolderContentsBatch(input: $input) {
+    ...LibraryFolderContentsFields
+  }
+}
+
+query Page($path: String!) {
+  page(path: $path) {
+    ...PageContentFields
+    previousPage {
+      path
+      pageNumber
+    }
+    nextPage {
+      path
+      pageNumber
+    }
+    bookPages {
+      path
+      pageNumber
+    }
+  }
+}
+
+mutation CreateFolder($input: CreateFolderInput!) {
+  createFolder(input: $input) {
+    ...FolderFields
+  }
+}
+
+mutation CreateBook($input: CreateBookInput!) {
+  createBook(input: $input) {
+    ...BookListFields
+  }
+}
+
+mutation UpdateBook($path: String!, $input: UpdateBookInput!) {
+  updateBook(path: $path, input: $input) {
+    ...BookListFields
+  }
+}
+
+mutation CreatePage($input: CreatePageInput!) {
+  createPage(input: $input) {
+    ...PageListFields
+  }
+}
+
+mutation UpdatePage($path: String!, $input: UpdatePageInput!) {
+  updatePage(path: $path, input: $input) {
+    path
+    settings {
+      ...PageSettingsFields
+    }
+    effectiveSettings {
+      ...PageEffectiveSettingsFields
+    }
+    ocrStatus
+    aiProcessingStatus
+    updatedAt
+  }
+}
+
+mutation UpdatePageSegmentTextWithReading(
+  $path: String!
+  $input: UpdatePageSegmentTextWithReadingInput!
+) {
+  updatePageSegmentTextWithReading(path: $path, input: $input) {
+    ...PageContentFields
+  }
+}
+
+mutation UpdatePageSegmentSourceText(
+  $path: String!
+  $input: UpdatePageSegmentSourceTextInput!
+) {
+  updatePageSegmentSourceText(path: $path, input: $input) {
+    ...PageContentFields
+  }
+}
+
+mutation UpdatePageSegmentTranslation(
+  $path: String!
+  $input: UpdatePageSegmentTranslationInput!
+) {
+  updatePageSegmentTranslation(path: $path, input: $input) {
+    ...PageContentFields
+  }
+}

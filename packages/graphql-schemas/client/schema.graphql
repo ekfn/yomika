@@ -1,0 +1,378 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type AiModelOption {
+  id: ID!
+  requestsPerMinute: Int!
+  thinkingMode: AiThinkingMode!
+}
+
+input AiModelOptionInput {
+  id: ID!
+  requestsPerMinute: Int!
+  thinkingMode: AiThinkingMode!
+}
+
+type AiProcessingConfig {
+  modelOptions: [AiModelOption!]!
+  steps: [AiProcessingStepConfig!]!
+}
+
+enum AiProcessingStatus {
+  CLEAN_UP_PENDING
+  CLEAN_UP_PROCESSING
+  COMPLETE
+  SPLITTING
+  SPLIT_PENDING
+  TRANSLATING
+  TRANSLATION_PENDING
+  VOCABULARY_PENDING
+  VOCABULARY_PROCESSING
+}
+
+enum AiProcessingStep {
+  CLEANUP
+  SPLIT
+  TRANSLATION
+  VOCABULARY
+}
+
+type AiProcessingStepConfig {
+  models: [AiProcessingStepModelConfig!]!
+  step: AiProcessingStep!
+}
+
+input AiProcessingStepConfigInput {
+  models: [AiProcessingStepModelConfigInput!]!
+  step: AiProcessingStep!
+}
+
+type AiProcessingStepModelConfig {
+  modelId: String!
+  thinkingLevel: AiThinkingLevel
+}
+
+input AiProcessingStepModelConfigInput {
+  modelId: String!
+  thinkingLevel: AiThinkingLevel
+}
+
+enum AiThinkingLevel {
+  HIGH
+  LOW
+  MEDIUM
+}
+
+enum AiThinkingMode {
+  BUDGET
+  LEVEL
+}
+
+type Book {
+  createdAt: DateTime!
+  firstPage: Page
+  importStatus: BookImportStatus!
+  importedPageCount: Int!
+  pageCount: Int!
+  pages: [Page!]!
+  path: String!
+  settings: BookSettings!
+  sourcePageCount: Int
+  sourcePdfUrl: String
+  updatedAt: DateTime!
+}
+
+enum BookImportStatus {
+  COMPLETE
+  IMPORTING
+  NONE
+  PENDING
+}
+
+type BookSettings {
+  aiProcessingEnabled: Boolean!
+  translationSourceLanguages: [String!]!
+  translationTargetLanguage: String!
+  vocabularyEnabled: Boolean!
+}
+
+input BookSettingsInput {
+  aiProcessingEnabled: Boolean
+  translationSourceLanguages: [String!]
+  translationTargetLanguage: String
+  vocabularyEnabled: Boolean
+}
+
+input CreateBookInput {
+  name: String!
+  parentPath: String
+  settings: BookSettingsInput
+  sourceUploadId: String!
+}
+
+input CreateFolderInput {
+  name: String!
+  parentPath: String
+}
+
+input CreatePageInput {
+  name: String!
+  parentPath: String
+  settings: PageSettingsInput
+  sourceUploadId: String!
+}
+
+type CurrentUser {
+  id: ID!
+  label: String!
+}
+
+scalar DateTime
+
+type Folder {
+  path: String!
+}
+
+type LibraryFolderContents {
+  books: [Book!]!
+  folders: [Folder!]!
+  pages: [Page!]!
+  parentPath: String
+}
+
+input LibraryFolderContentsInput {
+  parentPath: String
+}
+
+type LibrarySettingsDefaults {
+  aiProcessingEnabled: Boolean!
+  translationSourceLanguages: [String!]!
+  translationTargetLanguage: String!
+  vocabularyEnabled: Boolean!
+}
+
+input LoginInput {
+  password: String!
+}
+
+type Mutation {
+  createBook(input: CreateBookInput!): Book!
+  createFolder(input: CreateFolderInput!): Folder!
+  createPage(input: CreatePageInput!): Page!
+  login(input: LoginInput!): CurrentUser!
+  logout: Boolean!
+  noop: Boolean!
+  requestRunnerStop: RunnerStatus!
+  startRunner: RunnerStatus!
+  updateAiProcessingConfig(
+    input: UpdateAiProcessingConfigInput!
+  ): AiProcessingConfig!
+  updateBook(input: UpdateBookInput!, path: String!): Book!
+  updatePage(input: UpdatePageInput!, path: String!): Page!
+  updatePageSegmentSourceText(
+    input: UpdatePageSegmentSourceTextInput!
+    path: String!
+  ): Page!
+  updatePageSegmentTextWithReading(
+    input: UpdatePageSegmentTextWithReadingInput!
+    path: String!
+  ): Page!
+  updatePageSegmentTranslation(
+    input: UpdatePageSegmentTranslationInput!
+    path: String!
+  ): Page!
+}
+
+type OcrBlock {
+  bboxX1: Float
+  bboxX2: Float
+  bboxY1: Float
+  bboxY2: Float
+  content: String!
+  id: ID!
+  label: String
+  orderIndex: Int!
+  segments: [TranslationSegment!]!
+}
+
+enum OcrStatus {
+  COMPLETE
+  PENDING
+  PROCESSING
+}
+
+type Page {
+  aiProcessingStatus: AiProcessingStatus!
+  blocks: [OcrBlock!]!
+  bookPages: [PageSibling!]!
+  bookPath: String
+  createdAt: DateTime!
+  effectiveSettings: PageEffectiveSettings!
+  nextPage: PageSibling
+  ocrRawJson: String
+  ocrStatus: OcrStatus!
+  pageNumber: Int
+  path: String!
+  previousPage: PageSibling
+  settings: PageSettings!
+  sourceImageHeightPx: Int
+  sourceImagePreviewHeightPx: Int
+  sourceImagePreviewUrl: String
+  sourceImagePreviewWidthPx: Int
+  sourceImageUrl: String!
+  sourceImageWidthPx: Int
+  updatedAt: DateTime!
+}
+
+type PageEffectiveSettings {
+  aiProcessingEnabled: Boolean!
+  translationSourceLanguages: [String!]!
+  translationTargetLanguage: String!
+  vocabularyEnabled: Boolean!
+}
+
+type PageSettings {
+  aiProcessingEnabled: Boolean
+  translationSourceLanguages: [String!]
+  translationTargetLanguage: String
+  vocabularyEnabled: Boolean
+}
+
+input PageSettingsInput {
+  aiProcessingEnabled: Boolean
+  translationSourceLanguages: [String!]
+  translationTargetLanguage: String
+  vocabularyEnabled: Boolean
+}
+
+type PageSibling {
+  pageNumber: Int
+  path: String!
+}
+
+type Query {
+  aiProcessingConfig: AiProcessingConfig!
+  book(path: String!): Book!
+  books(parentPath: String): [Book!]!
+  currentUser: CurrentUser
+  folder(path: String!): Folder!
+  folders(parentPath: String): [Folder!]!
+  health: String!
+  libraryFolderContents(parentPath: String): LibraryFolderContents!
+  libraryFolderContentsBatch(
+    input: [LibraryFolderContentsInput!]!
+  ): [LibraryFolderContents!]!
+  librarySettingsDefaults: LibrarySettingsDefaults!
+  page(path: String!): Page!
+  pages(parentPath: String): [Page!]!
+  runnerOperationLog(limit: Int): [RunnerOperationLogEntry!]!
+  runnerStatus: RunnerStatus!
+}
+
+type RunnerLastError {
+  message: String!
+  occurredAt: DateTime!
+  task: RunnerTask
+}
+
+type RunnerOperationLogEntry {
+  model: String
+  operation: String!
+  params: RunnerOperationLogParams
+  phase: String!
+  result: RunnerOperationLogResult
+  runId: String!
+  ts: DateTime!
+}
+
+type RunnerOperationLogParams {
+  bookPath: String
+  label: String!
+  pagePath: String
+}
+
+type RunnerOperationLogResult {
+  durationMs: Int!
+  message: String
+  status: String!
+}
+
+enum RunnerState {
+  IDLE
+  IDLE_WITH_SKIPPED_TASKS
+  RUNNING
+  STOPPED_AFTER_ERROR
+}
+
+type RunnerStatus {
+  currentTask: RunnerTask
+  exhaustedModelIds: [String!]!
+  finishedAt: DateTime
+  lastError: RunnerLastError
+  lastMessage: String
+  processedTaskCount: Int!
+  runId: String
+  skippedTaskCount: Int!
+  startedAt: DateTime
+  state: RunnerState!
+  stopRequested: Boolean!
+}
+
+type RunnerTask {
+  bookPath: String
+  label: String!
+  pagePath: String
+  type: String!
+}
+
+type TranslationSegment {
+  id: ID!
+  languages: [String!]!
+  orderIndex: Int!
+  sourceText: String!
+  textWithReading: String
+  translation: String
+  vocabulary: [VocabularyEntry!]!
+}
+
+input UpdateAiProcessingConfigInput {
+  modelOptions: [AiModelOptionInput!]!
+  steps: [AiProcessingStepConfigInput!]!
+}
+
+input UpdateBookInput {
+  name: String
+  settings: BookSettingsInput
+}
+
+input UpdatePageInput {
+  aiProcessingStatus: AiProcessingStatus
+  name: String
+  ocrStatus: OcrStatus
+  settings: PageSettingsInput
+}
+
+input UpdatePageSegmentSourceTextInput {
+  blockId: ID!
+  segmentId: ID!
+  sourceText: String!
+}
+
+input UpdatePageSegmentTextWithReadingInput {
+  blockId: ID!
+  segmentId: ID!
+  textWithReading: String
+}
+
+input UpdatePageSegmentTranslationInput {
+  blockId: ID!
+  segmentId: ID!
+  translation: String
+}
+
+type VocabularyEntry {
+  text: String!
+  translation: String!
+}

@@ -1,0 +1,17 @@
+type CurrentUser {
+  id: ID!
+  label: String!
+}
+
+input LoginInput {
+  password: String!
+}
+
+extend type Query {
+  currentUser: CurrentUser
+}
+
+extend type Mutation {
+  login(input: LoginInput!): CurrentUser!
+  logout: Boolean!
+}

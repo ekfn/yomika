@@ -1,0 +1,233 @@
+enum OcrStatus {
+  PENDING
+  PROCESSING
+  COMPLETE
+}
+
+enum AiProcessingStatus {
+  CLEAN_UP_PENDING
+  CLEAN_UP_PROCESSING
+  SPLIT_PENDING
+  SPLITTING
+  TRANSLATION_PENDING
+  TRANSLATING
+  VOCABULARY_PENDING
+  VOCABULARY_PROCESSING
+  COMPLETE
+}
+
+enum BookImportStatus {
+  NONE
+  PENDING
+  IMPORTING
+  COMPLETE
+}
+
+type BookSettings {
+  translationSourceLanguages: [String!]!
+  translationTargetLanguage: String!
+  aiProcessingEnabled: Boolean!
+  vocabularyEnabled: Boolean!
+}
+
+type PageSettings {
+  translationSourceLanguages: [String!]
+  translationTargetLanguage: String
+  aiProcessingEnabled: Boolean
+  vocabularyEnabled: Boolean
+}
+
+type PageEffectiveSettings {
+  translationSourceLanguages: [String!]!
+  translationTargetLanguage: String!
+  aiProcessingEnabled: Boolean!
+  vocabularyEnabled: Boolean!
+}
+
+type LibrarySettingsDefaults {
+  translationSourceLanguages: [String!]!
+  translationTargetLanguage: String!
+  aiProcessingEnabled: Boolean!
+  vocabularyEnabled: Boolean!
+}
+
+type Folder {
+  path: String!
+}
+
+type LibraryFolderContents {
+  parentPath: String
+  folders: [Folder!]!
+  books: [Book!]!
+  pages: [Page!]!
+}
+
+type Book {
+  path: String!
+  sourcePdfUrl: String
+  sourcePageCount: Int
+  settings: BookSettings!
+  importStatus: BookImportStatus!
+  importedPageCount: Int!
+  pageCount: Int!
+  firstPage: Page
+  pages: [Page!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Page {
+  path: String!
+  bookPath: String
+  pageNumber: Int
+  sourceImageUrl: String!
+  sourceImageWidthPx: Int
+  sourceImageHeightPx: Int
+  sourceImagePreviewUrl: String
+  sourceImagePreviewWidthPx: Int
+  sourceImagePreviewHeightPx: Int
+  settings: PageSettings!
+  effectiveSettings: PageEffectiveSettings!
+  ocrStatus: OcrStatus!
+  aiProcessingStatus: AiProcessingStatus!
+  ocrRawJson: String
+  blocks: [OcrBlock!]!
+  previousPage: PageSibling
+  nextPage: PageSibling
+  bookPages: [PageSibling!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type PageSibling {
+  path: String!
+  pageNumber: Int
+}
+
+type OcrBlock {
+  id: ID!
+  orderIndex: Int!
+  label: String
+  bboxX1: Float
+  bboxY1: Float
+  bboxX2: Float
+  bboxY2: Float
+  content: String!
+  segments: [TranslationSegment!]!
+}
+
+type TranslationSegment {
+  id: ID!
+  orderIndex: Int!
+  sourceText: String!
+  languages: [String!]!
+  translation: String
+  textWithReading: String
+  vocabulary: [VocabularyEntry!]!
+}
+
+type VocabularyEntry {
+  text: String!
+  translation: String!
+}
+
+input BookSettingsInput {
+  translationSourceLanguages: [String!]
+  translationTargetLanguage: String
+  aiProcessingEnabled: Boolean
+  vocabularyEnabled: Boolean
+}
+
+input PageSettingsInput {
+  translationSourceLanguages: [String!]
+  translationTargetLanguage: String
+  aiProcessingEnabled: Boolean
+  vocabularyEnabled: Boolean
+}
+
+input CreateFolderInput {
+  name: String!
+  parentPath: String
+}
+
+input CreateBookInput {
+  name: String!
+  parentPath: String
+  sourceUploadId: String!
+  settings: BookSettingsInput
+}
+
+input UpdateBookInput {
+  name: String
+  settings: BookSettingsInput
+}
+
+input CreatePageInput {
+  name: String!
+  parentPath: String
+  sourceUploadId: String!
+  settings: PageSettingsInput
+}
+
+input UpdatePageInput {
+  name: String
+  ocrStatus: OcrStatus
+  aiProcessingStatus: AiProcessingStatus
+  settings: PageSettingsInput
+}
+
+input UpdatePageSegmentTextWithReadingInput {
+  blockId: ID!
+  segmentId: ID!
+  textWithReading: String
+}
+
+input UpdatePageSegmentSourceTextInput {
+  blockId: ID!
+  segmentId: ID!
+  sourceText: String!
+}
+
+input UpdatePageSegmentTranslationInput {
+  blockId: ID!
+  segmentId: ID!
+  translation: String
+}
+
+input LibraryFolderContentsInput {
+  parentPath: String
+}
+
+extend type Query {
+  librarySettingsDefaults: LibrarySettingsDefaults!
+  libraryFolderContents(parentPath: String): LibraryFolderContents!
+  libraryFolderContentsBatch(
+    input: [LibraryFolderContentsInput!]!
+  ): [LibraryFolderContents!]!
+  folders(parentPath: String): [Folder!]!
+  folder(path: String!): Folder!
+  books(parentPath: String): [Book!]!
+  book(path: String!): Book!
+  pages(parentPath: String): [Page!]!
+  page(path: String!): Page!
+}
+
+extend type Mutation {
+  createFolder(input: CreateFolderInput!): Folder!
+  createBook(input: CreateBookInput!): Book!
+  updateBook(path: String!, input: UpdateBookInput!): Book!
+  createPage(input: CreatePageInput!): Page!
+  updatePage(path: String!, input: UpdatePageInput!): Page!
+  updatePageSegmentSourceText(
+    path: String!
+    input: UpdatePageSegmentSourceTextInput!
+  ): Page!
+  updatePageSegmentTranslation(
+    path: String!
+    input: UpdatePageSegmentTranslationInput!
+  ): Page!
+  updatePageSegmentTextWithReading(
+    path: String!
+    input: UpdatePageSegmentTextWithReadingInput!
+  ): Page!
+}
