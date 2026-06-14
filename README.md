@@ -1,7 +1,7 @@
 # Yomika
 
-Yomika is a local app for managing a filesystem library of books and pages,
-running OCR, and applying AI processing for cleanup, splitting, translation, and
+Yomika is a local app for managing a file-based library of books and pages,
+running OCR, and using AI processing for cleanup, splitting, translation, and
 vocabulary.
 
 ## Processing
@@ -11,17 +11,17 @@ runner automatically when it is not already running. You can also open
 `/runner` to check progress, start it manually, or ask it to stop after the
 current operation.
 
-Processing is sequential. A later step uses the data produced by the previous
-step, so a new page gradually moves from source image to OCR text, cleaned text,
+Processing is sequential. Each step uses the data produced by the previous step,
+so a new page gradually moves from a source image to OCR text, cleaned text,
 translation segments, translations, and vocabulary.
 
-1. Book import reads a PDF book and creates one page for each PDF page. After
+1. Book import reads a PDF and creates one page for each PDF page. After
    this step, the book page list is populated and each created page has its
    source image ready for OCR.
 2. OCR analyzes the source image and detects text blocks with their positions on
-   the page. After this step, the page can show detected OCR regions over the
+   the page. After this step, the page can display detected OCR regions over the
    image and the raw OCR block data.
-3. Cleanup sends the OCR blocks to AI and asks it to fix recognition noise,
+3. Cleanup sends the OCR blocks to AI and asks it to fix recognition errors,
    normalize the text, and produce clean page blocks. After this step, the page
    has readable cleaned blocks that are better suited for splitting and
    translation.
@@ -35,8 +35,7 @@ translation segments, translations, and vocabulary.
    page. After this step, translated segments can show vocabulary entries with
    readings and translations.
 
-If AI processing is disabled for a book or page, the AI steps are not selected
-for processing.
+If AI processing is disabled for a book or page, the AI steps are skipped.
 
 ## Library Files
 
@@ -73,7 +72,7 @@ The app serves these files from the library for display in the UI.
 
 ## Install
 
-Create a local `.env` file from the `.env.example`:
+Create a local `.env` file from `.env.example`:
 
 ```bash
 cp .env.example .env
@@ -87,16 +86,16 @@ Edit `.env` before starting the app. At minimum, set:
 - `TRANSLATION_SOURCE_DEFAULT_LANGUAGES`
 - `TRANSLATION_TARGET_DEFAULT_LANGUAGE`
 
-Install the local OCR runtime:
-
-```bash
-pnpm ocr:setup
-```
-
-Install Node dependencies:
+Install dependencies:
 
 ```bash
 pnpm install
+```
+
+Install the local OCR runtime if you want to process OCR tasks:
+
+```bash
+pnpm ocr:setup
 ```
 
 Build the app:
@@ -107,10 +106,16 @@ pnpm build
 
 ## Run
 
-Start the app and OCR runtime:
+Start the app with the OCR runtime:
 
 ```bash
 pnpm start
+```
+
+Or start only the app without the OCR runtime to use less memory:
+
+```bash
+pnpm start:no-ocr
 ```
 
 Open:
@@ -118,9 +123,6 @@ Open:
 ```text
 http://127.0.0.1:43100
 ```
-
-`pnpm start` starts the compiled Yomika app, the PaddleOCR wrapper, and the MLX
-VLM server used by OCR.
 
 ## Environment
 
