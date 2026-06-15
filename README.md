@@ -98,6 +98,12 @@ Install the local OCR runtime if you want to process OCR tasks:
 pnpm ocr:setup
 ```
 
+On Windows, use:
+
+```bash
+pnpm ocr:setup:win
+```
+
 Build the app:
 
 ```bash
@@ -110,6 +116,12 @@ Start the app with the OCR runtime:
 
 ```bash
 pnpm start
+```
+
+On Windows, use:
+
+```bash
+pnpm start:win
 ```
 
 Or start only the app without the OCR runtime to use less memory:
