@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadOcrRuntime } from "./ocr-env.mjs";
 
 const projectRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
@@ -17,13 +18,16 @@ const modes = {
   },
 };
 
-const mode = process.env.OCR_RUNTIME?.trim().toLowerCase() || "cpu";
-const config = modes[mode];
+let mode;
 
-if (!config) {
-  console.error("OCR_RUNTIME must be either cpu or gpu.");
+try {
+  mode = loadOcrRuntime();
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
+
+const config = modes[mode];
 
 const python = process.env.PYTHON ?? "python";
 const venvPython =

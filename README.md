@@ -153,11 +153,11 @@ Translation defaults:
 
 AI and OCR:
 
-| Variable                | Purpose                              |
-| ----------------------- | ------------------------------------ |
-| `GEMINI_API_KEY`        | Gemini API key for AI processing     |
-| `PADDLEOCR_VL_BASE_URL` | PaddleOCR wrapper URL used by Yomika |
-| `OCR_RUNTIME`           | OCR runtime mode: `cpu` or `gpu`     |
+| Variable                | Purpose                               |
+| ----------------------- | ------------------------------------- |
+| `GEMINI_API_KEY`        | Gemini API key for AI processing      |
+| `PADDLEOCR_VL_BASE_URL` | Local PaddleOCR wrapper URL with port |
+| `OCR_RUNTIME`           | OCR runtime mode: `cpu` or `gpu`      |
 
 ## Update
 

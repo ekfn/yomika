@@ -2,12 +2,17 @@ import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadOcrRuntime, loadPaddleOcrVlBaseUrl } from "./ocr-env.mjs";
 
 const projectRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const mode = process.env.OCR_RUNTIME?.trim().toLowerCase() || "cpu";
+let mode;
+let paddleOcrVlBaseUrl;
 
-if (mode !== "cpu" && mode !== "gpu") {
-  console.error("OCR_RUNTIME must be either cpu or gpu.");
+try {
+  mode = loadOcrRuntime();
+  paddleOcrVlBaseUrl = loadPaddleOcrVlBaseUrl();
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
 
@@ -33,9 +38,9 @@ const result = spawnSync(
     "infra/paddleocr-vl",
     "app:app",
     "--host",
-    "127.0.0.1",
+    paddleOcrVlBaseUrl.hostname,
     "--port",
-    "43102",
+    paddleOcrVlBaseUrl.port,
   ],
   {
     cwd: projectRoot,
