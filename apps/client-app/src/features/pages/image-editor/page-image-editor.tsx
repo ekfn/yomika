@@ -14,7 +14,6 @@ import {
   MinusIcon,
   MousePointer2Icon,
   PencilIcon,
-  PlusIcon,
   Redo2Icon,
   SquareIcon,
   Trash2Icon,
@@ -28,9 +27,19 @@ import {
   Rect,
   Stage,
 } from "react-konva";
-import { Button } from "@/components/ui";
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { exportPageImageEditorStage } from "./page-image-editor-export";
+import {
+  exportPageImageEditorImage,
+  exportPageImageEditorSelectionDataUrl,
+} from "./page-image-editor-export";
 import type {
   PageImageEditorExportHandle,
   PageImageEditorShape,
@@ -39,16 +48,15 @@ import type {
 } from "./page-image-editor-types";
 
 const STROKE_COLORS: PageImageEditorStrokeColor[] = [
+  "#111827",
   "#dc2626",
   "#2563eb",
   "#16a34a",
   "#f59e0b",
-  "#111827",
   "#ffffff",
 ];
 
-const MIN_STROKE_WIDTH = 1;
-const STROKE_WIDTH_STEP = 4;
+const STROKE_WIDTH_OPTIONS = [1, 2, 4, 8, 12, 16, 24, 32, 64, 128] as const;
 const EDITOR_MAX_HEIGHT_PX = 640;
 
 type PageImageEditorProps = {
@@ -225,22 +233,6 @@ function isPendingSelectionTarget(
   );
 }
 
-function getPreviousStrokeWidth(strokeWidth: number) {
-  if (strokeWidth <= STROKE_WIDTH_STEP) {
-    return MIN_STROKE_WIDTH;
-  }
-
-  return strokeWidth - STROKE_WIDTH_STEP;
-}
-
-function getNextStrokeWidth(strokeWidth: number) {
-  if (strokeWidth < STROKE_WIDTH_STEP) {
-    return STROKE_WIDTH_STEP;
-  }
-
-  return strokeWidth + STROKE_WIDTH_STEP;
-}
-
 function ToolButton({
   active,
   children,
@@ -288,10 +280,10 @@ export const PageImageEditor = forwardRef<
   const draftShapeRef = useRef<PageImageEditorShape | null>(null);
   const selectionDraftRef = useRef<SelectionBounds | null>(null);
   const shapeStartRef = useRef<PointerPosition | null>(null);
-  const [tool, setTool] = useState<PageImageEditorTool>("marker");
+  const [tool, setTool] = useState<PageImageEditorTool>("rectangle");
   const [strokeColor, setStrokeColor] =
-    useState<PageImageEditorStrokeColor>("#dc2626");
-  const [strokeWidth, setStrokeWidth] = useState(8);
+    useState<PageImageEditorStrokeColor>("#111827");
+  const [strokeWidth, setStrokeWidth] = useState(1);
   const [shapes, setShapes] = useState<PageImageEditorShape[]>([]);
   const [redoShapes, setRedoShapes] = useState<PageImageEditorShape[]>([]);
   const [draftShape, setDraftShape] = useState<PageImageEditorShape | null>(
@@ -339,47 +331,28 @@ export const PageImageEditor = forwardRef<
     setPendingSelectionId(null);
   }
 
-  function hideSelectionUiNodes() {
-    const stage = stageRef.current;
-    const selectionUiNodes = stage?.find(".selection-ui") ?? [];
-
-    selectionUiNodes.forEach((node) => {
-      node.hide();
-    });
-
-    return () => {
-      selectionUiNodes.forEach((node) => {
-        node.show();
-      });
-    };
-  }
-
   useImperativeHandle(
     ref,
     () => ({
       hasEdits,
       exportEditedImage: async () => {
-        if (!stageRef.current) {
+        if (imageState.status !== "loaded") {
           throw new Error("The image editor is not ready.");
         }
 
-        const restoreSelectionUiNodes = hideSelectionUiNodes();
+        const blob = await exportPageImageEditorImage({
+          image: imageState.image,
+          imageHeightPx,
+          imageWidthPx,
+          shapes,
+        });
 
-        try {
-          const blob = await exportPageImageEditorStage({
-            stage: stageRef.current,
-            scale,
-          });
+        applyPendingSelection();
 
-          applyPendingSelection();
-
-          return blob;
-        } finally {
-          restoreSelectionUiNodes();
-        }
+        return blob;
       },
     }),
-    [hasEdits, scale],
+    [hasEdits, imageHeightPx, imageState, imageWidthPx, shapes],
   );
 
   useEffect(() => {
@@ -426,24 +399,19 @@ export const PageImageEditor = forwardRef<
       return;
     }
 
-    const stage = stageRef.current;
-
-    if (!stage) {
+    if (imageState.status !== "loaded") {
       updateSelectionDraft(null);
       updateShapeStart(null);
       return;
     }
 
-    const restoreSelectionUiNodes = hideSelectionUiNodes();
-
     try {
-      const dataUrl = stage.toDataURL({
-        x: bounds.x * scale,
-        y: bounds.y * scale,
-        width: bounds.width * scale,
-        height: bounds.height * scale,
-        pixelRatio: 1 / scale,
-        mimeType: "image/png",
+      const dataUrl = exportPageImageEditorSelectionDataUrl({
+        image: imageState.image,
+        imageHeightPx,
+        imageWidthPx,
+        shapes,
+        crop: bounds,
       });
       const image = await loadImageFromDataUrl(dataUrl);
       const selectionId = createShapeId();
@@ -471,7 +439,6 @@ export const PageImageEditor = forwardRef<
           : "The selected image fragment could not be moved.",
       );
     } finally {
-      restoreSelectionUiNodes();
       updateSelectionDraft(null);
       updateShapeStart(null);
     }
@@ -716,22 +683,6 @@ export const PageImageEditor = forwardRef<
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background p-2">
         <div className="flex items-center gap-1">
           <ToolButton
-            active={tool === "marker"}
-            disabled={disabled}
-            label="Marker"
-            onClick={() => handleToolChange("marker")}
-          >
-            <PencilIcon />
-          </ToolButton>
-          <ToolButton
-            active={tool === "line"}
-            disabled={disabled}
-            label="Line"
-            onClick={() => handleToolChange("line")}
-          >
-            <MinusIcon />
-          </ToolButton>
-          <ToolButton
             active={tool === "rectangle"}
             disabled={disabled}
             label="Rectangle"
@@ -754,6 +705,22 @@ export const PageImageEditor = forwardRef<
             onClick={() => handleToolChange("select-move")}
           >
             <MousePointer2Icon />
+          </ToolButton>
+          <ToolButton
+            active={tool === "line"}
+            disabled={disabled}
+            label="Line"
+            onClick={() => handleToolChange("line")}
+          >
+            <MinusIcon />
+          </ToolButton>
+          <ToolButton
+            active={tool === "marker"}
+            disabled={disabled}
+            label="Marker"
+            onClick={() => handleToolChange("marker")}
+          >
+            <PencilIcon />
           </ToolButton>
         </div>
 
@@ -782,36 +749,25 @@ export const PageImageEditor = forwardRef<
 
         <div className="h-6 w-px bg-border" aria-hidden="true" />
 
-        <div className="flex items-center gap-1" aria-label="Stroke width">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            disabled={disabled || strokeWidth === MIN_STROKE_WIDTH}
-            aria-label="Decrease stroke width"
-            title="Decrease stroke width"
-            onClick={() =>
-              setStrokeWidth((current) => getPreviousStrokeWidth(current))
-            }
-          >
-            <MinusIcon />
-          </Button>
-          <span className="min-w-12 text-center text-sm tabular-nums text-foreground">
-            {strokeWidth}px
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
+        <div className="flex items-center gap-1.5" aria-label="Stroke width">
+          <Select
+            value={String(strokeWidth)}
             disabled={disabled}
-            aria-label="Increase stroke width"
-            title="Increase stroke width"
-            onClick={() =>
-              setStrokeWidth((current) => getNextStrokeWidth(current))
-            }
+            onValueChange={(value) => {
+              setStrokeWidth(Number(value));
+            }}
           >
-            <PlusIcon />
-          </Button>
+            <SelectTrigger size="sm" className="w-20" aria-label="Stroke width">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {STROKE_WIDTH_OPTIONS.map((value) => (
+                <SelectItem key={value} value={String(value)}>
+                  {value}px
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="h-6 w-px bg-border" aria-hidden="true" />
@@ -1012,11 +968,6 @@ export const PageImageEditor = forwardRef<
           )}
         </div>
       </div>
-
-      <p className="flex items-center gap-1 text-xs text-muted-foreground">
-        <MousePointer2Icon className="size-3" aria-hidden="true" />
-        Drawings overwrite this page source image when saved.
-      </p>
     </div>
   );
 });

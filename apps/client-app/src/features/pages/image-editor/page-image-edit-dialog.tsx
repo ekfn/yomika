@@ -9,7 +9,6 @@ import {
   Button,
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -152,9 +151,6 @@ export function PageImageEditDialog({
       <DialogContent className="max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 sm:max-w-6xl">
         <DialogHeader>
           <DialogTitle>Edit Image</DialogTitle>
-          <DialogDescription>
-            Saving overwrites this page source image and resets processing.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0">
