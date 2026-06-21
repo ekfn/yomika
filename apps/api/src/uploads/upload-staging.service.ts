@@ -9,7 +9,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import { extname, join, resolve } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import {
   BadRequestException,
   Injectable,
@@ -612,12 +612,12 @@ export class UploadStagingService {
   }
 
   private assertInsideUploadsDir(path: string): string {
-    const uploadsDir = this.getUploadsDir();
+    const uploadsDir = resolve(this.getUploadsDir());
     const resolvedPath = resolve(path);
 
     if (
       resolvedPath !== uploadsDir &&
-      !resolvedPath.startsWith(`${uploadsDir}/`)
+      !resolvedPath.startsWith(`${uploadsDir}${sep}`)
     ) {
       throw new Error("Resolved path is outside the upload staging directory.");
     }

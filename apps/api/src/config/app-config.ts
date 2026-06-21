@@ -1,4 +1,4 @@
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { z } from "zod";
 
 const booleanEnvSchema = z
@@ -88,7 +88,7 @@ export function loadAppConfig(projectRoot = findProjectRoot()): AppConfig {
 }
 
 function resolveMaybeRelative(projectRoot: string, path: string): string {
-  return path.startsWith("/") ? path : resolve(projectRoot, path);
+  return isAbsolute(path) ? path : resolve(projectRoot, path);
 }
 
 function findProjectRoot(): string {
