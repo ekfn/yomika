@@ -121,6 +121,88 @@ function toBlobPart(buffer: Buffer): BlobPart {
   return new Uint8Array(buffer);
 }
 
+function getErrorRecord(error: unknown): Record<string, unknown> | null {
+  return typeof error === "object" && error !== null
+    ? (error as Record<string, unknown>)
+    : null;
+}
+
+function getErrorStringProperty(
+  error: unknown,
+  property: string,
+): string | null {
+  const value = getErrorRecord(error)?.[property];
+
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function getErrorDetailProperty(
+  error: unknown,
+  property: string,
+): string | null {
+  const value = getErrorRecord(error)?.[property];
+
+  if (
+    typeof value !== "string" &&
+    typeof value !== "number" &&
+    typeof value !== "boolean"
+  ) {
+    return null;
+  }
+
+  return `${property}=${String(value)}`;
+}
+
+function getNestedErrors(error: unknown): unknown[] {
+  const errors = getErrorRecord(error)?.errors;
+
+  return Array.isArray(errors) ? errors : [];
+}
+
+function describeErrorLike(error: unknown): string {
+  const name =
+    error instanceof Error ? error.name : getErrorStringProperty(error, "name");
+  const message =
+    error instanceof Error
+      ? error.message
+      : getErrorStringProperty(error, "message");
+  const label =
+    name && message
+      ? `${name}: ${message}`
+      : (message ?? name ?? String(error));
+  const details = ["code", "errno", "syscall", "address", "port"]
+    .map((property) => getErrorDetailProperty(error, property))
+    .filter((detail): detail is string => detail !== null);
+
+  return details.length > 0 ? `${label} (${details.join(", ")})` : label;
+}
+
+function formatFetchError(error: unknown): string {
+  const message = describeErrorLike(error);
+  const cause = getErrorRecord(error)?.cause;
+  const details: string[] = [];
+
+  if (cause !== undefined) {
+    details.push(`cause: ${describeErrorLike(cause)}`);
+
+    const causeErrors = getNestedErrors(cause);
+
+    if (causeErrors.length > 0) {
+      details.push(
+        `cause errors: ${causeErrors.map(describeErrorLike).join("; ")}`,
+      );
+    }
+  }
+
+  const errors = getNestedErrors(error);
+
+  if (errors.length > 0) {
+    details.push(`errors: ${errors.map(describeErrorLike).join("; ")}`);
+  }
+
+  return details.length > 0 ? `${message}; ${details.join("; ")}` : message;
+}
+
 function normalizeOcrBlockLabel(blockLabel: string | null | undefined): string {
   return (blockLabel ?? "")
     .trim()
@@ -470,7 +552,7 @@ async function postPaddleOcrPng(input: {
       body: formData,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = formatFetchError(error);
 
     throw new Error(
       `PaddleOCR ${input.processName} network request failed for ${input.endpoint}: ${message}`,
@@ -1011,7 +1093,7 @@ export class PaddleOcrClient {
         body: formData,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = formatFetchError(error);
 
       throw new Error(
         `PaddleOCR-VL network request failed for ${endpoint}: ${message}`,

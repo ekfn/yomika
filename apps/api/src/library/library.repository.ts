@@ -98,6 +98,7 @@ export class LibraryRepository {
 
   async createFolder(folderPath: string): Promise<FolderRecord> {
     try {
+      await this.ensureLibraryRoots();
       await mkdir(this.getLibraryDirectory(folderPath));
     } catch (error) {
       if (isFileAlreadyExistsError(error)) {
@@ -331,6 +332,7 @@ export class LibraryRepository {
     entityName: string,
   ): Promise<void> {
     try {
+      await this.ensureLibraryRoots();
       await mkdir(this.getLibraryDirectory(entityPath));
     } catch (error) {
       if (isFileAlreadyExistsError(error)) {
