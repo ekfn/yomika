@@ -58,6 +58,8 @@ export function LibraryRoute() {
 
   return (
     <section className="space-y-6">
+      <title>{`Library | Yomika`}</title>
+
       <PageHeader
         breadcrumbs={
           <PageBreadcrumb

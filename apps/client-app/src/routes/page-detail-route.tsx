@@ -78,18 +78,36 @@ export function PageDetailRoute() {
   }, [page?.path]);
 
   if (!path) {
-    return <ErrorState title="Page path is missing" />;
+    return (
+      <>
+        <title>{`Page | Yomika`}</title>
+        <ErrorState title="Page path is missing" />
+      </>
+    );
   }
 
   if (loading && !page) {
-    return <LoadingState />;
+    return (
+      <>
+        <title>{`Page | Yomika`}</title>
+        <LoadingState />
+      </>
+    );
   }
 
   if (error || !page) {
-    return <ErrorState message={error?.message ?? "Page was not found."} />;
+    return (
+      <>
+        <title>{`Page | Yomika`}</title>
+        <ErrorState message={error?.message ?? "Page was not found."} />
+      </>
+    );
   }
 
   const displayTitle = getPageDisplayTitle(page);
+  const documentDisplayTitle = page.bookPath
+    ? `${getBookDisplayName(page.bookPath)} - ${displayTitle}`
+    : displayTitle;
   const folderPath = getContainingFolderPath(page.path);
   const sourceImageUrl = appendMediaCacheBuster(
     page.sourceImageUrl,
@@ -115,6 +133,8 @@ export function PageDetailRoute() {
         isPageTransitioning ? PAGE_DETAIL_TRANSITIONING_CLASSES : null,
       )}
     >
+      <title>{`${documentDisplayTitle} | Yomika`}</title>
+
       <div className="flex flex-col gap-3">
         <PageHeader
           className="mb-0"

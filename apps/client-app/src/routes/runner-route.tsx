@@ -62,11 +62,21 @@ export function RunnerRoute() {
   const [requestRunnerStop, stopState] = useMutation(RequestRunnerStopDocument);
 
   if (loading && !data) {
-    return <LoadingState />;
+    return (
+      <>
+        <title>{`Runner | Yomika`}</title>
+        <LoadingState />
+      </>
+    );
   }
 
   if (error) {
-    return <ErrorState message={error.message} />;
+    return (
+      <>
+        <title>{`Runner | Yomika`}</title>
+        <ErrorState message={error.message} />
+      </>
+    );
   }
 
   const status = data?.runnerStatus;
@@ -75,6 +85,8 @@ export function RunnerRoute() {
 
   return (
     <div className="grid gap-6">
+      <title>{`Runner | Yomika`}</title>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-normal">Runner</h1>

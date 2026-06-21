@@ -37,26 +37,49 @@ export function BookDetailRoute() {
   });
 
   if (!path) {
-    return <ErrorState title="Book path is missing" />;
+    return (
+      <>
+        <title>{`Book | Yomika`}</title>
+        <ErrorState title="Book path is missing" />
+      </>
+    );
   }
 
   if (loading && !data) {
-    return <LoadingState />;
+    return (
+      <>
+        <title>{`Book | Yomika`}</title>
+        <LoadingState />
+      </>
+    );
   }
 
   if (error) {
-    return <ErrorState message={error.message} />;
+    return (
+      <>
+        <title>{`Book | Yomika`}</title>
+        <ErrorState message={error.message} />
+      </>
+    );
   }
 
   if (!data?.book) {
-    return <ErrorState title="Book was not found" />;
+    return (
+      <>
+        <title>{`Book | Yomika`}</title>
+        <ErrorState title="Book was not found" />
+      </>
+    );
   }
 
   const book = data.book;
+  const bookTitle = getBookDisplayName(book.path);
   const folderPath = getContainingFolderPath(book.path);
 
   return (
     <section className="flex flex-col gap-6 pb-10">
+      <title>{`${bookTitle} | Yomika`}</title>
+
       <PageHeader
         className="mb-0"
         breadcrumbs={
@@ -73,7 +96,7 @@ export function BookDetailRoute() {
                 to: getLibraryFolderRoute(folder.path),
               })),
               {
-                label: getBookDisplayName(book.path),
+                label: bookTitle,
                 icon: <LibraryBig className="size-4" aria-hidden="true" />,
               },
             ]}
