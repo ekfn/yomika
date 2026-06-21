@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -10,33 +9,22 @@ from paddleocr import PaddleOCR, PaddleOCRVL
 app = FastAPI()
 request_semaphore = asyncio.Semaphore(1)
 
+OCR_CPU_THREADS = 16
+OCR_MKLDNN_CACHE_CAPACITY = 32
 
-def parse_positive_int(name: str, default: int) -> int:
-    raw = os.getenv(name)
-
-    if raw is None or raw == "":
-        return default
-
-    value = int(raw)
-
-    if value < 1:
-        raise RuntimeError(f"{name} must be greater than 0.")
-
-    return value
-
-
-PADDLEOCR_VL_CPU_THREADS = parse_positive_int("PADDLEOCR_VL_CPU_THREADS", 16)
-PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY = parse_positive_int(
-    "PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY",
-    32,
-)
-
-PADDLE_OCR_COMMON_ARGS = {
+PADDLE_OCR_CPU_ARGS = {
     "device": "cpu",
-    "engine": "paddle_static",
     "enable_mkldnn": True,
-    "mkldnn_cache_capacity": PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY,
-    "cpu_threads": PADDLEOCR_VL_CPU_THREADS,
+    "mkldnn_cache_capacity": OCR_MKLDNN_CACHE_CAPACITY,
+    "cpu_threads": OCR_CPU_THREADS,
+}
+PADDLE_OCR_STATIC_ENGINE_ARGS = {
+    **PADDLE_OCR_CPU_ARGS,
+    "engine": "paddle_static",
+}
+PADDLE_OCR_VL_ENGINE_ARGS = {
+    "device": "cpu",
+    "engine": "paddle_dynamic",
 }
 PADDLE_OCR_VL_FEATURE_OPTIONS = {
     "use_doc_orientation_classify": False,
@@ -46,12 +34,12 @@ PADDLE_OCR_VL_FEATURE_OPTIONS = {
 }
 
 pipeline = PaddleOCRVL(
-    **PADDLE_OCR_COMMON_ARGS,
+    **PADDLE_OCR_VL_ENGINE_ARGS,
     **PADDLE_OCR_VL_FEATURE_OPTIONS,
-    pipeline_version="v1.5",
+    pipeline_version="v1.6",
 )
 text_presence_pipeline = PaddleOCR(
-    **PADDLE_OCR_COMMON_ARGS,
+    **PADDLE_OCR_STATIC_ENGINE_ARGS,
     use_doc_orientation_classify=False,
     use_doc_unwarping=False,
     use_textline_orientation=False,
