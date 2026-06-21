@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -11,6 +12,10 @@ request_semaphore = asyncio.Semaphore(1)
 
 OCR_CPU_THREADS = 16
 OCR_MKLDNN_CACHE_CAPACITY = 32
+OCR_DEVICE = os.getenv("YOMIKA_OCR_DEVICE", "cpu").strip().lower()
+
+if OCR_DEVICE not in ("cpu", "gpu"):
+    raise RuntimeError("YOMIKA_OCR_DEVICE must be either 'cpu' or 'gpu'.")
 
 PADDLE_OCR_CPU_ARGS = {
     "device": "cpu",
@@ -19,11 +24,17 @@ PADDLE_OCR_CPU_ARGS = {
     "cpu_threads": OCR_CPU_THREADS,
 }
 PADDLE_OCR_STATIC_ENGINE_ARGS = {
-    **PADDLE_OCR_CPU_ARGS,
+    **(
+        PADDLE_OCR_CPU_ARGS
+        if OCR_DEVICE == "cpu"
+        else {
+            "device": OCR_DEVICE,
+        }
+    ),
     "engine": "paddle_static",
 }
 PADDLE_OCR_VL_ENGINE_ARGS = {
-    "device": "cpu",
+    "device": OCR_DEVICE,
     "engine": "paddle_dynamic",
 }
 PADDLE_OCR_VL_FEATURE_OPTIONS = {

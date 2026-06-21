@@ -43,7 +43,8 @@ pids/
 *.seed
 *.pid.lock
 storage/
-.venv_paddleocr_vl/
+.venv_paddleocr_cpu/
+.venv_paddleocr_gpu/
 __pycache__/
 *.pyc
 

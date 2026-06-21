@@ -85,6 +85,7 @@ Edit `.env` before starting the app. At minimum, set:
 - `GEMINI_API_KEY`
 - `TRANSLATION_SOURCE_DEFAULT_LANGUAGES`
 - `TRANSLATION_TARGET_DEFAULT_LANGUAGE`
+- `OCR_RUNTIME`
 
 Install dependencies:
 
@@ -92,16 +93,10 @@ Install dependencies:
 pnpm install
 ```
 
-Install the local OCR runtime if you want to process OCR tasks:
+Install the local OCR runtime:
 
 ```bash
 pnpm ocr:setup
-```
-
-On Windows, use:
-
-```bash
-pnpm ocr:setup:win
 ```
 
 Build the app:
@@ -116,12 +111,6 @@ Start the app with the OCR runtime:
 
 ```bash
 pnpm start
-```
-
-On Windows, use:
-
-```bash
-pnpm start:win
 ```
 
 Or start only the app without the OCR runtime to use less memory:
@@ -168,11 +157,12 @@ AI and OCR:
 | ----------------------- | ------------------------------------ |
 | `GEMINI_API_KEY`        | Gemini API key for AI processing     |
 | `PADDLEOCR_VL_BASE_URL` | PaddleOCR wrapper URL used by Yomika |
+| `OCR_RUNTIME`           | OCR runtime mode: `cpu` or `gpu`     |
 
 ## Update
 
 ```bash
-git pull origin main
+git pull
 ```
 
 After pulling project changes, install dependencies if `package.json` or
