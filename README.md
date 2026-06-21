@@ -168,7 +168,6 @@ AI and OCR:
 | ----------------------- | ------------------------------------ |
 | `GEMINI_API_KEY`        | Gemini API key for AI processing     |
 | `PADDLEOCR_VL_BASE_URL` | PaddleOCR wrapper URL used by Yomika |
-| `MLX_VLM_SERVER_URL`    | MLX VLM URL used by the OCR wrapper  |
 
 ## Update
 

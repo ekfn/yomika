@@ -30,20 +30,12 @@ PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY = parse_positive_int(
     "PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY",
     32,
 )
-MLX_VLM_SERVER_URL = os.getenv("MLX_VLM_SERVER_URL", "http://127.0.0.1:43103/")
-PADDLEOCR_VL_MODEL_NAME = os.getenv(
-    "PADDLEOCR_VL_MODEL_NAME",
-    "PaddlePaddle/PaddleOCR-VL-1.5",
-)
 pipeline = PaddleOCRVL(
     device="cpu",
     pipeline_version="v1.5",
     enable_mkldnn=True,
     mkldnn_cache_capacity=PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY,
     cpu_threads=PADDLEOCR_VL_CPU_THREADS,
-    vl_rec_backend="mlx-vlm-server",
-    vl_rec_server_url=MLX_VLM_SERVER_URL,
-    vl_rec_api_model_name=PADDLEOCR_VL_MODEL_NAME,
     use_doc_orientation_classify=True,
     use_doc_unwarping=True,
 )
