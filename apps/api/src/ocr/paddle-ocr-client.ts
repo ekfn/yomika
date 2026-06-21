@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import { Injectable } from "@nestjs/common";
 import sharp from "sharp";
+import { Agent } from "undici";
 import { loadAppConfig } from "@/config/app-config";
 import { normalizePaddleOcrBlocks } from "./ocr-normalization";
 
@@ -88,6 +89,23 @@ const OCR_TRIM_PADDING_RATIO = 0.02;
 const OCR_CONTENT_CROP_PADDING_MIN_PX = 24;
 const OCR_CONTENT_CROP_PADDING_RATIO = 0.02;
 const IMAGE_BLOCK_LABEL = "image";
+const PADDLE_OCR_REQUEST_TIMEOUT_MS = 30 * 60 * 1000;
+const paddleOcrDispatcher = new Agent({
+  headersTimeout: PADDLE_OCR_REQUEST_TIMEOUT_MS,
+  bodyTimeout: PADDLE_OCR_REQUEST_TIMEOUT_MS,
+});
+
+function fetchPaddleOcr(
+  endpoint: string,
+  init: RequestInit,
+): Promise<Response> {
+  const requestInit: RequestInit & { dispatcher: Agent } = {
+    ...init,
+    dispatcher: paddleOcrDispatcher,
+  };
+
+  return fetch(endpoint, requestInit);
+}
 
 const DEFAULT_PADDLE_OCR_OPTIONS: PaddleOcrOptions = {
   useDocOrientationClassify: false,
@@ -547,7 +565,7 @@ async function postPaddleOcrPng(input: {
   let response: Response;
 
   try {
-    response = await fetch(input.endpoint, {
+    response = await fetchPaddleOcr(input.endpoint, {
       method: "POST",
       body: formData,
     });
@@ -1088,7 +1106,7 @@ export class PaddleOcrClient {
     let response: Response;
 
     try {
-      response = await fetch(endpoint, {
+      response = await fetchPaddleOcr(endpoint, {
         method: "POST",
         body: formData,
       });

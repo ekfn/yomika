@@ -31,6 +31,7 @@
     "remeda": "^2.0.0",
     "rxjs": "7.8.2",
     "sharp": "0.34.2",
+    "undici": "7.27.2",
     "zod": "4.3.6"
   },
   "devDependencies": {

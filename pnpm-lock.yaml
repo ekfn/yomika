@@ -121,6 +121,9 @@ importers:
       sharp:
         specifier: 0.34.2
         version: 0.34.2
+      undici:
+        specifier: 7.27.2
+        version: 7.27.2
       zod:
         specifier: 4.3.6
         version: 4.3.6
