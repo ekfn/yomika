@@ -10,14 +10,6 @@ export type PaddleOcrRunMetadata = {
   mimeType: string;
   widthPx: number;
   heightPx: number;
-  options?: PaddleOcrOptions;
-};
-
-export type PaddleOcrOptions = {
-  useDocOrientationClassify?: boolean;
-  useDocUnwarping?: boolean;
-  useOcrForImageBlock?: boolean;
-  mergeLayoutBlocks?: boolean;
 };
 
 type PaddleOcrVlPageJsonResult = Record<string, unknown>;
@@ -106,13 +98,6 @@ function fetchPaddleOcr(
 
   return fetch(endpoint, requestInit);
 }
-
-const DEFAULT_PADDLE_OCR_OPTIONS: PaddleOcrOptions = {
-  useDocOrientationClassify: false,
-  useDocUnwarping: false,
-  useOcrForImageBlock: false,
-  mergeLayoutBlocks: false,
-};
 
 function buildOcrUploadFilename(sourceImagePath: string, mimeType: string) {
   const sourceName = basename(sourceImagePath, extname(sourceImagePath));
@@ -1088,10 +1073,6 @@ export class PaddleOcrClient {
       normalizedImage,
       sourceImagePath,
     });
-    const options = {
-      ...DEFAULT_PADDLE_OCR_OPTIONS,
-      ...metadata.options,
-    };
     const formData = new FormData();
 
     formData.append(
@@ -1101,7 +1082,6 @@ export class PaddleOcrClient {
       }),
       buildOcrUploadFilename(sourceImagePath, contentFocusedImage.mimeType),
     );
-    formData.append("options", JSON.stringify(options));
 
     let response: Response;
 

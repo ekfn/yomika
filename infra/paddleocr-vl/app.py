@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from paddleocr import PaddleOCR, PaddleOCRVL
 
 app = FastAPI()
@@ -30,72 +30,34 @@ PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY = parse_positive_int(
     "PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY",
     32,
 )
+
+PADDLE_OCR_COMMON_ARGS = {
+    "device": "cpu",
+    "engine": "paddle_static",
+    "enable_mkldnn": True,
+    "mkldnn_cache_capacity": PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY,
+    "cpu_threads": PADDLEOCR_VL_CPU_THREADS,
+}
+PADDLE_OCR_VL_FEATURE_OPTIONS = {
+    "use_doc_orientation_classify": False,
+    "use_doc_unwarping": False,
+    "use_ocr_for_image_block": False,
+    "merge_layout_blocks": False,
+}
+
 pipeline = PaddleOCRVL(
-    device="cpu",
+    **PADDLE_OCR_COMMON_ARGS,
+    **PADDLE_OCR_VL_FEATURE_OPTIONS,
     pipeline_version="v1.5",
-    enable_mkldnn=True,
-    mkldnn_cache_capacity=PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY,
-    cpu_threads=PADDLEOCR_VL_CPU_THREADS,
-    use_doc_orientation_classify=True,
-    use_doc_unwarping=True,
 )
 text_presence_pipeline = PaddleOCR(
-    device="cpu",
-    enable_mkldnn=True,
-    mkldnn_cache_capacity=PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY,
-    cpu_threads=PADDLEOCR_VL_CPU_THREADS,
+    **PADDLE_OCR_COMMON_ARGS,
     use_doc_orientation_classify=False,
     use_doc_unwarping=False,
     use_textline_orientation=False,
     lang="japan",
     ocr_version="PP-OCRv5",
 )
-PREDICT_OPTION_NAME_MAP = {
-    "useDocOrientationClassify": "use_doc_orientation_classify",
-    "useDocUnwarping": "use_doc_unwarping",
-    "useOcrForImageBlock": "use_ocr_for_image_block",
-    "mergeLayoutBlocks": "merge_layout_blocks",
-}
-
-
-def parse_predict_options(raw_options: str | None) -> dict[str, bool]:
-    if raw_options is None or raw_options == "":
-        return {}
-
-    try:
-        parsed = json.loads(raw_options)
-    except json.JSONDecodeError as error:
-        raise HTTPException(
-            status_code=400,
-            detail="The OCR options payload must be valid JSON.",
-        ) from error
-
-    if not isinstance(parsed, dict):
-        raise HTTPException(
-            status_code=400,
-            detail="The OCR options payload must be a JSON object.",
-        )
-
-    predict_options: dict[str, bool] = {}
-
-    for key, value in parsed.items():
-        mapped_key = PREDICT_OPTION_NAME_MAP.get(key)
-
-        if mapped_key is None:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported OCR option: {key}.",
-            )
-
-        if not isinstance(value, bool):
-            raise HTTPException(
-                status_code=400,
-                detail=f"OCR option {key} must be a boolean.",
-            )
-
-        predict_options[mapped_key] = value
-
-    return predict_options
 
 
 def get_result_payload(result):
@@ -330,7 +292,6 @@ def health():
 @app.post("/ocr/paddleocr-vl/page-image")
 async def run_ocr(
     file: UploadFile = File(...),
-    options: str | None = Form(None),
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="A file upload is required.")
@@ -343,7 +304,6 @@ async def run_ocr(
     async with request_semaphore:
         try:
             suffix = Path(file.filename).suffix or ".png"
-            predict_options = parse_predict_options(options)
 
             with TemporaryDirectory() as workdir_name:
                 workdir = Path(workdir_name)
@@ -353,7 +313,7 @@ async def run_ocr(
 
                 for result in pipeline.predict(
                     input=str(input_path),
-                    **predict_options,
+                    **PADDLE_OCR_VL_FEATURE_OPTIONS,
                 ):
                     if hasattr(result, "json"):
                         results.append(result.json)
