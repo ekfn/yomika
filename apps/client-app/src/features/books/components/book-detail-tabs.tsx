@@ -5,6 +5,7 @@ import { getPageDisplayName } from "@yomika/shared";
 import { PageOcrTab } from "@/features/pages/detail/page-ocr-tab";
 import { PageTranslationTab } from "@/features/pages/detail/page-translation-tab";
 import type { PageImageDimensions } from "@/features/pages/detail/types";
+import { PageActionsMenu } from "@/features/pages/components/page-actions-menu";
 import {
   Card,
   CardContent,
@@ -83,9 +84,11 @@ function BookNoPagesEmpty() {
 function BookPageSection({
   page,
   children,
+  onPageChanged,
 }: {
   page: BookPage;
   children: ReactNode;
+  onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
 }) {
   const pageTitle = getPageDisplayTitle(page);
   const pageNumberLabel = page.pageNumber ? `Page ${page.pageNumber}` : null;
@@ -93,15 +96,24 @@ function BookPageSection({
   return (
     <section className="flex flex-col gap-3" data-book-page-path={page.path}>
       <div className="min-w-0">
-        <Link
-          to={getPageRoute(page.path)}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex min-w-0 items-start gap-2 font-heading text-base leading-snug font-medium text-foreground underline-offset-4 hover:underline"
-        >
-          <FileTextIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 break-words">{pageTitle}</span>
-        </Link>
+        <div className="flex min-w-0 items-center justify-between gap-1.5">
+          <Link
+            to={getPageRoute(page.path)}
+            rel="noreferrer"
+            className="inline-flex min-w-0 items-start gap-2 font-heading text-base leading-snug font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            <FileTextIcon
+              className="mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+            <span className="min-w-0 break-words">{pageTitle}</span>
+          </Link>
+          <PageActionsMenu
+            name={pageTitle}
+            page={page}
+            onCompleted={onPageChanged}
+          />
+        </div>
         {pageNumberLabel && pageNumberLabel !== pageTitle ? (
           <p className="mt-0.5 text-sm text-muted-foreground">
             {pageNumberLabel}
@@ -117,10 +129,12 @@ function BookOcrTab({
   pages,
   selectedBlockIdsByPagePath,
   onSelectBlock,
+  onPageChanged,
 }: {
   pages: readonly BookPage[];
   selectedBlockIdsByPagePath: SelectedBlockIdsByPagePath;
   onSelectBlock: (pagePath: string, blockId: string) => void;
+  onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
 }) {
   if (pages.length === 0) {
     return <BookNoPagesEmpty />;
@@ -133,7 +147,11 @@ function BookOcrTab({
         const selectedBlockId = selectedBlockIdsByPagePath[page.path] ?? null;
 
         return (
-          <BookPageSection key={page.path} page={page}>
+          <BookPageSection
+            key={page.path}
+            page={page}
+            onPageChanged={onPageChanged}
+          >
             <PageOcrTab
               pagePath={page.path}
               sourceImageUrl={appendMediaCacheBuster(
@@ -159,10 +177,12 @@ function BookTranslationTab({
   pages,
   selectedBlockIdsByPagePath,
   onSelectBlock,
+  onPageChanged,
 }: {
   pages: readonly BookPage[];
   selectedBlockIdsByPagePath: SelectedBlockIdsByPagePath;
   onSelectBlock: (pagePath: string, blockId: string) => void;
+  onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
 }) {
   if (pages.length === 0) {
     return <BookNoPagesEmpty />;
@@ -174,7 +194,11 @@ function BookTranslationTab({
         const selectedBlockId = selectedBlockIdsByPagePath[page.path] ?? null;
 
         return (
-          <BookPageSection key={page.path} page={page}>
+          <BookPageSection
+            key={page.path}
+            page={page}
+            onPageChanged={onPageChanged}
+          >
             <PageTranslationTab
               pagePath={page.path}
               sourceImageUrl={appendMediaCacheBuster(
@@ -198,7 +222,13 @@ function BookTranslationTab({
   );
 }
 
-export function BookDetailTabs({ book }: { book: BookDetail }) {
+export function BookDetailTabs({
+  book,
+  onPageChanged,
+}: {
+  book: BookDetail;
+  onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
+}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTab = getBookDetailTabValue(
     searchParams.get(BOOK_DETAIL_TAB_SEARCH_PARAM),
@@ -216,6 +246,10 @@ export function BookDetailTabs({ book }: { book: BookDetail }) {
 
   useEffect(() => {
     if (!targetPagePath) {
+      return;
+    }
+
+    if (book.pages[0]?.path === targetPagePath) {
       return;
     }
 
@@ -268,7 +302,7 @@ export function BookDetailTabs({ book }: { book: BookDetail }) {
       </div>
 
       <TabsContent value="info">
-        <BookInfoTab book={book} />
+        <BookInfoTab book={book} onPageChanged={onPageChanged} />
       </TabsContent>
 
       <TabsContent value="ocr">
@@ -276,6 +310,7 @@ export function BookDetailTabs({ book }: { book: BookDetail }) {
           pages={book.pages}
           selectedBlockIdsByPagePath={selectedBlockIdsByPagePath}
           onSelectBlock={handleSelectBlock}
+          onPageChanged={onPageChanged}
         />
       </TabsContent>
 
@@ -284,6 +319,7 @@ export function BookDetailTabs({ book }: { book: BookDetail }) {
           pages={book.pages}
           selectedBlockIdsByPagePath={selectedBlockIdsByPagePath}
           onSelectBlock={handleSelectBlock}
+          onPageChanged={onPageChanged}
         />
       </TabsContent>
     </Tabs>

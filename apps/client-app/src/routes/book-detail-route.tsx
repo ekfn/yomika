@@ -100,7 +100,7 @@ export function BookDetailRoute() {
                       setIsEditDialogOpen(true);
                     }}
                   >
-                    Edit
+                    Edit Book
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -124,7 +124,12 @@ export function BookDetailRoute() {
         }}
       />
 
-      <BookDetailTabs book={book} />
+      <BookDetailTabs
+        book={book}
+        onPageChanged={async () => {
+          await refetch();
+        }}
+      />
     </section>
   );
 }

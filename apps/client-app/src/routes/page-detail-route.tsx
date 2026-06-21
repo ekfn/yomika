@@ -164,13 +164,6 @@ export function PageDetailRoute() {
                   <DropdownMenuGroup>
                     <DropdownMenuItem
                       onSelect={() => {
-                        setIsImageEditDialogOpen(true);
-                      }}
-                    >
-                      Edit image
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
                         setIsEditDialogOpen(true);
                       }}
                     >
@@ -178,10 +171,17 @@ export function PageDetailRoute() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => {
+                        setIsImageEditDialogOpen(true);
+                      }}
+                    >
+                      Edit Image
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
                         setIsAiStatusDialogOpen(true);
                       }}
                     >
-                      Edit status
+                      Edit Page Status
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>

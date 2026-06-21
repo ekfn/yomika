@@ -1,5 +1,6 @@
 import { FileTextIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { type KeyboardEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { getPageDisplayName } from "@yomika/shared";
 import { BookImportStatusBadge } from "@/components/common/status-badges";
 import {
@@ -13,6 +14,7 @@ import {
 import type { BookQuery } from "@/graphql/generated/graphql";
 import { getPageRoute } from "@/lib/library-paths";
 import { appendMediaCacheBuster } from "@/lib/media-url";
+import { PageActionsMenu } from "@/features/pages/components/page-actions-menu";
 import { PageProcessingStatusBadges } from "@/features/pages/components/page-processing-status-badges";
 
 type BookDetail = BookQuery["book"];
@@ -121,7 +123,15 @@ function BookInfoPagePreview({ page }: { page: BookInfoPage }) {
   );
 }
 
-function BookInfoPagesCard({ pages }: { pages: readonly BookInfoPage[] }) {
+function BookInfoPagesCard({
+  pages,
+  onPageChanged,
+}: {
+  pages: readonly BookInfoPage[];
+  onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
+}) {
+  const navigate = useNavigate();
+
   return (
     <Card>
       <CardHeader>
@@ -142,44 +152,72 @@ function BookInfoPagesCard({ pages }: { pages: readonly BookInfoPage[] }) {
               const pageNumberLabel = page.pageNumber
                 ? `Page ${page.pageNumber}`
                 : null;
+              const pageRoute = getPageRoute(page.path);
+              const openPage = () => {
+                navigate(pageRoute);
+              };
+              const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+                if (event.target !== event.currentTarget) {
+                  return;
+                }
+
+                if (event.key !== "Enter" && event.key !== " ") {
+                  return;
+                }
+
+                event.preventDefault();
+                openPage();
+              };
 
               return (
-                <Link
+                <div
                   key={page.path}
-                  to={getPageRoute(page.path)}
+                  role="link"
+                  tabIndex={0}
                   data-book-page-path={page.path}
-                  className="grid gap-3 rounded-lg border border-border p-3 transition hover:bg-muted/50 sm:grid-cols-[102px_minmax(0,1fr)]"
+                  className="grid cursor-pointer gap-3 rounded-lg border border-border p-3 text-left transition hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none sm:grid-cols-[102px_minmax(0,1fr)]"
+                  onClick={openPage}
+                  onKeyDown={handleKeyDown}
                 >
                   <BookInfoPagePreview page={page} />
                   <div className="min-w-0 space-y-3">
-                    <div className="flex items-start gap-2">
-                      <FileTextIcon
-                        className="mt-0.5 size-4 shrink-0"
-                        aria-hidden="true"
-                      />
-                      <div className="min-w-0">
-                        <h3 className="font-heading text-sm leading-snug font-medium text-foreground">
-                          {pageTitle}
-                        </h3>
-                        {pageNumberLabel && pageNumberLabel !== pageTitle ? (
-                          <p className="mt-0.5 text-sm text-muted-foreground">
-                            {pageNumberLabel}
-                          </p>
-                        ) : null}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-start gap-2">
+                        <FileTextIcon
+                          className="mt-0.5 size-4 shrink-0"
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0">
+                          <h3 className="font-heading text-sm leading-snug font-medium text-foreground">
+                            {pageTitle}
+                          </h3>
+                          {pageNumberLabel && pageNumberLabel !== pageTitle ? (
+                            <p className="mt-0.5 text-sm text-muted-foreground">
+                              {pageNumberLabel}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
+                      <PageActionsMenu
+                        name={pageTitle}
+                        page={page}
+                        onCompleted={onPageChanged}
+                      />
                     </div>
-                    <PageProcessingStatusBadges
-                      ocrStatus={page.ocrStatus}
-                      aiProcessingStatus={page.aiProcessingStatus}
-                      aiProcessingEnabled={
-                        page.effectiveSettings.aiProcessingEnabled
-                      }
-                      vocabularyEnabled={
-                        page.effectiveSettings.vocabularyEnabled
-                      }
-                    />
+                    <div>
+                      <PageProcessingStatusBadges
+                        ocrStatus={page.ocrStatus}
+                        aiProcessingStatus={page.aiProcessingStatus}
+                        aiProcessingEnabled={
+                          page.effectiveSettings.aiProcessingEnabled
+                        }
+                        vocabularyEnabled={
+                          page.effectiveSettings.vocabularyEnabled
+                        }
+                      />
+                    </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -189,7 +227,13 @@ function BookInfoPagesCard({ pages }: { pages: readonly BookInfoPage[] }) {
   );
 }
 
-export function BookInfoTab({ book }: { book: BookDetail }) {
+export function BookInfoTab({
+  book,
+  onPageChanged,
+}: {
+  book: BookDetail;
+  onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -268,7 +312,7 @@ export function BookInfoTab({ book }: { book: BookDetail }) {
         </CardContent>
       </Card>
 
-      <BookInfoPagesCard pages={book.pages} />
+      <BookInfoPagesCard pages={book.pages} onPageChanged={onPageChanged} />
     </div>
   );
 }

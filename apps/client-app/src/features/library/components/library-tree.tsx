@@ -48,10 +48,9 @@ import { getBookRoute, getPageRoute } from "@/lib/library-paths";
 import { appendMediaCacheBuster } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 import { BookFormDialog } from "@/features/books/components/book-form-dialog";
-import { PageAiStatusDialog } from "@/features/pages/components/page-ai-status-dialog";
 import { PageFormDialog } from "@/features/pages/components/page-form-dialog";
 import { PageProcessingStatusBadges } from "@/features/pages/components/page-processing-status-badges";
-import { PageImageEditDialog } from "@/features/pages/image-editor/page-image-edit-dialog";
+import { PageActionsMenu } from "@/features/pages/components/page-actions-menu";
 import {
   AiProcessingDisabledBadge,
   VocabularyDisabledBadge,
@@ -788,85 +787,12 @@ function LibraryTreePageActions({
   page: LibraryTreePage;
   name: string;
 }) {
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isImageEditOpen, setIsImageEditOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-
-  const handleMenuClick = (event: MouseEvent) => {
-    event.stopPropagation();
-  };
   const handleCompleted = async (path?: string) => {
     await onContentChanged(getContainingFolderPath(path ?? page.path));
   };
 
   return (
-    <div className="shrink-0" onClick={handleMenuClick}>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`More actions for ${name}`}
-          >
-            <MoreHorizontalIcon />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuGroup>
-            <DropdownMenuItem asChild>
-              <Link
-                to={getPageRoute(page.path)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open page
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                setIsImageEditOpen(true);
-              }}
-            >
-              Edit image
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                setIsEditOpen(true);
-              }}
-            >
-              Edit page
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                setIsStatusOpen(true);
-              }}
-            >
-              Edit status
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <PageImageEditDialog
-        open={isImageEditOpen}
-        pagePath={page.path}
-        onCompleted={() => handleCompleted(page.path)}
-        onOpenChange={setIsImageEditOpen}
-      />
-      <PageFormDialog
-        open={isEditOpen}
-        page={page}
-        trigger={null}
-        onCompleted={handleCompleted}
-        onOpenChange={setIsEditOpen}
-      />
-      <PageAiStatusDialog
-        open={isStatusOpen}
-        page={page}
-        onCompleted={() => handleCompleted(page.path)}
-        onOpenChange={setIsStatusOpen}
-      />
-    </div>
+    <PageActionsMenu name={name} page={page} onCompleted={handleCompleted} />
   );
 }
 
