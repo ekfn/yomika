@@ -198,6 +198,27 @@ mutation UpdatePage($path: String!, $input: UpdatePageInput!) {
   }
 }
 
+mutation OverwritePageSourceImage(
+  $path: String!
+  $input: OverwritePageSourceImageInput!
+) {
+  overwritePageSourceImage(path: $path, input: $input) {
+    ...PageContentFields
+    previousPage {
+      path
+      pageNumber
+    }
+    nextPage {
+      path
+      pageNumber
+    }
+    bookPages {
+      path
+      pageNumber
+    }
+  }
+}
+
 mutation UpdatePageSegmentTextWithReading(
   $path: String!
   $input: UpdatePageSegmentTextWithReadingInput!

@@ -164,6 +164,10 @@ type Mutation {
   login(input: LoginInput!): CurrentUser!
   logout: Boolean!
   noop: Boolean!
+  overwritePageSourceImage(
+    input: OverwritePageSourceImageInput!
+    path: String!
+  ): Page!
   requestRunnerStop: RunnerStatus!
   startRunner: RunnerStatus!
   updateAiProcessingConfig(
@@ -201,6 +205,10 @@ enum OcrStatus {
   COMPLETE
   PENDING
   PROCESSING
+}
+
+input OverwritePageSourceImageInput {
+  sourceUploadId: String!
 }
 
 type Page {

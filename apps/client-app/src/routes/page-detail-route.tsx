@@ -28,12 +28,14 @@ import { PageAiStatusDialog } from "@/features/pages/components/page-ai-status-d
 import { PageFormDialog } from "@/features/pages/components/page-form-dialog";
 import { PageSiblingNav } from "@/features/pages/components/page-sibling-nav";
 import { PageDetailTabs } from "@/features/pages/detail/page-detail-tabs";
+import { PageImageEditDialog } from "@/features/pages/image-editor/page-image-edit-dialog";
 import { PageDocument, type PageQuery } from "@/graphql/generated/graphql";
 import {
   getBookRoute,
   getLibraryFolderRoute,
   getPageRoute,
 } from "@/lib/library-paths";
+import { appendMediaCacheBuster } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 
 const PAGE_DETAIL_CONTENT_CLASSES =
@@ -64,11 +66,13 @@ export function PageDetailRoute() {
   const page = visibleData?.page ?? null;
   const isPageTransitioning = loading && Boolean(page);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [isImageEditDialogOpen, setIsImageEditDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAiStatusDialogOpen, setIsAiStatusDialogOpen] = useState(false);
 
   useEffect(() => {
     setSelectedBlockId(null);
+    setIsImageEditDialogOpen(false);
     setIsEditDialogOpen(false);
     setIsAiStatusDialogOpen(false);
   }, [page?.path]);
@@ -87,7 +91,10 @@ export function PageDetailRoute() {
 
   const displayTitle = getPageDisplayTitle(page);
   const folderPath = getContainingFolderPath(page.path);
-  const sourceImageUrl = page.sourceImageUrl;
+  const sourceImageUrl = appendMediaCacheBuster(
+    page.sourceImageUrl,
+    page.updatedAt,
+  );
   const sourceImageDimensions = getSourceImageDimensions(page);
   const pageSiblingNavProps = page.bookPath
     ? {
@@ -157,6 +164,13 @@ export function PageDetailRoute() {
                   <DropdownMenuGroup>
                     <DropdownMenuItem
                       onSelect={() => {
+                        setIsImageEditDialogOpen(true);
+                      }}
+                    >
+                      Edit image
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
                         setIsEditDialogOpen(true);
                       }}
                     >
@@ -174,6 +188,15 @@ export function PageDetailRoute() {
               </DropdownMenu>
             </div>
           }
+        />
+
+        <PageImageEditDialog
+          page={page}
+          open={isImageEditDialogOpen}
+          onOpenChange={setIsImageEditDialogOpen}
+          onCompleted={async () => {
+            await refetch();
+          }}
         />
 
         <PageFormDialog

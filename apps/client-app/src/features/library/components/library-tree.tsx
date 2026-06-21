@@ -45,11 +45,13 @@ import type {
   PageListFieldsFragment,
 } from "@/graphql/generated/graphql";
 import { getBookRoute, getPageRoute } from "@/lib/library-paths";
+import { appendMediaCacheBuster } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 import { BookFormDialog } from "@/features/books/components/book-form-dialog";
 import { PageAiStatusDialog } from "@/features/pages/components/page-ai-status-dialog";
 import { PageFormDialog } from "@/features/pages/components/page-form-dialog";
 import { PageProcessingStatusBadges } from "@/features/pages/components/page-processing-status-badges";
+import { PageImageEditDialog } from "@/features/pages/image-editor/page-image-edit-dialog";
 import {
   AiProcessingDisabledBadge,
   VocabularyDisabledBadge,
@@ -787,6 +789,7 @@ function LibraryTreePageActions({
   name: string;
 }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isImageEditOpen, setIsImageEditOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   const handleMenuClick = (event: MouseEvent) => {
@@ -822,6 +825,13 @@ function LibraryTreePageActions({
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => {
+                setIsImageEditOpen(true);
+              }}
+            >
+              Edit image
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => {
                 setIsEditOpen(true);
               }}
             >
@@ -837,6 +847,12 @@ function LibraryTreePageActions({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      <PageImageEditDialog
+        open={isImageEditOpen}
+        pagePath={page.path}
+        onCompleted={() => handleCompleted(page.path)}
+        onOpenChange={setIsImageEditOpen}
+      />
       <PageFormDialog
         open={isEditOpen}
         page={page}
@@ -859,7 +875,9 @@ const LibraryTreePagePreview = memo(function LibraryTreePagePreview({
 }: {
   page: LibraryTreePage;
 }) {
-  const sourcePreviewUrl = page.sourceImagePreviewUrl;
+  const sourcePreviewUrl = page.sourceImagePreviewUrl
+    ? appendMediaCacheBuster(page.sourceImagePreviewUrl, page.updatedAt)
+    : null;
 
   return (
     <span className="flex w-9 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">

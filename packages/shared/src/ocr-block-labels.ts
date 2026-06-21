@@ -29,6 +29,7 @@ export type OcrBlockLabel = (typeof OCR_BLOCK_LABELS)[number];
 export const NON_TEXT_OCR_BLOCK_LABELS = [
   "number",
   "formula",
+  "algorithm",
   "seal",
   "chart",
   "formula_number",
@@ -53,7 +54,6 @@ export const TEXT_OCR_BLOCK_LABELS = [
   "doc_title",
   "footnote",
   "header",
-  "algorithm",
   "footer",
   "chart_title",
   "aside_text",

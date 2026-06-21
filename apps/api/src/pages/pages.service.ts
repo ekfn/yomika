@@ -1,4 +1,4 @@
-import { mkdir, rename, rm } from "node:fs/promises";
+import { mkdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import sharp from "sharp";
@@ -10,6 +10,7 @@ import {
   type PageRecord,
 } from "@/library/library.repository";
 import type { PageBlockJson, PageJson } from "@/library/library-schemas";
+import { RunnerService } from "@/runner/runner.service";
 import { UploadStagingService } from "@/uploads/upload-staging.service";
 
 type PageSettingsInput =
@@ -34,6 +35,10 @@ type UpdatePageInput = {
   ocrStatus?: PageJson["ocrStatus"] | null;
   aiProcessingStatus?: PageJson["aiProcessingStatus"] | null;
   settings?: PageSettingsInput;
+};
+
+type OverwritePageSourceImageInput = {
+  sourceUploadId: string;
 };
 
 type UpdatePageSegmentTextWithReadingInput = {
@@ -110,6 +115,7 @@ export class PagesService {
   constructor(
     private readonly foldersService: FoldersService,
     private readonly libraryRepository: LibraryRepository,
+    private readonly runnerService: RunnerService,
     private readonly uploadStagingService: UploadStagingService,
   ) {}
 
@@ -284,6 +290,97 @@ export class PagesService {
     return this.toPageOutput(
       await this.libraryRepository.getPageByPath(outputRecord.path),
     );
+  }
+
+  async overwritePageSourceImage(
+    path: string,
+    input: OverwritePageSourceImageInput,
+  ): Promise<PageOutput> {
+    const record = await this.libraryRepository.getPageByPath(path);
+    const uploadMetadata = await this.uploadStagingService.readMetadata(
+      input.sourceUploadId,
+    );
+
+    if (uploadMetadata.kind !== "PAGE_IMAGE") {
+      throw new BadRequestException("The upload is not a page image.");
+    }
+
+    const sourcePath = this.libraryRepository.getPageSourceImagePath(record);
+    const sourceTempPath = join(record.pageDir, ".source.editing.tmp");
+    const previewFileName =
+      record.page.sourceImage.previewFileName ?? "preview.png";
+    const previewPath = join(record.pageDir, previewFileName);
+    const previewTempPath = join(record.pageDir, ".preview.editing.tmp");
+    const stagedSourcePath = this.uploadStagingService.getStagedUploadFilePath(
+      input.sourceUploadId,
+      uploadMetadata.fileName,
+    );
+
+    try {
+      await rm(sourceTempPath, { force: true }).catch(() => undefined);
+      await rm(previewTempPath, { force: true }).catch(() => undefined);
+
+      await encodeImageForMimeType(
+        sharp(stagedSourcePath),
+        record.page.sourceImage.mimeType,
+      ).toFile(sourceTempPath);
+
+      const sourceMetadata = await sharp(sourceTempPath).metadata();
+
+      if (!sourceMetadata.width || !sourceMetadata.height) {
+        throw new BadRequestException(
+          "Edited image dimensions could not be read.",
+        );
+      }
+
+      const sourceStats = await stat(sourceTempPath);
+      const preview = await sharp(sourceTempPath)
+        .resize({
+          width: 400,
+          height: 600,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .png()
+        .toBuffer({ resolveWithObject: true });
+
+      await sharp(preview.data).toFile(previewTempPath);
+      await rename(sourceTempPath, sourcePath);
+      await rename(previewTempPath, previewPath);
+
+      const now = new Date().toISOString();
+      const updatedPage: PageJson = {
+        ...record.page,
+        sourceImage: {
+          ...record.page.sourceImage,
+          sizeBytes: sourceStats.size,
+          widthPx: sourceMetadata.width,
+          heightPx: sourceMetadata.height,
+          previewFileName,
+          previewWidthPx: preview.info.width,
+          previewHeightPx: preview.info.height,
+        },
+        ocrStatus: "PENDING",
+        aiProcessingStatus: "CLEAN_UP_PENDING",
+        ocrRawJson: null,
+        blocks: [],
+        updatedAt: now,
+      };
+
+      await this.libraryRepository.writePage(record.path, updatedPage);
+      await this.uploadStagingService
+        .removeUpload(input.sourceUploadId)
+        .catch(() => undefined);
+      await this.runnerService.start();
+
+      return this.toPageOutput(
+        await this.libraryRepository.getPageByPath(record.path),
+      );
+    } catch (error) {
+      await rm(sourceTempPath, { force: true }).catch(() => undefined);
+      await rm(previewTempPath, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 
   async updatePageSegmentTextWithReading(
@@ -762,6 +859,27 @@ function normalizeLanguage(value: string | null | undefined) {
   }
 
   return normalizedLanguage;
+}
+
+function encodeImageForMimeType(
+  image: ReturnType<typeof sharp>,
+  mimeType: string,
+) {
+  if (mimeType === "image/png") {
+    return image.png();
+  }
+
+  if (mimeType === "image/jpeg") {
+    return image.jpeg();
+  }
+
+  if (mimeType === "image/webp") {
+    return image.webp();
+  }
+
+  throw new BadRequestException(
+    `Page source image MIME type ${mimeType} is not supported.`,
+  );
 }
 
 function normalizeDirectoryName(name: string): string {

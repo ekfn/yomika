@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 import type { BookQuery } from "@/graphql/generated/graphql";
 import { getPageRoute } from "@/lib/library-paths";
+import { appendMediaCacheBuster } from "@/lib/media-url";
 import { BookInfoTab } from "./book-info-tab";
 
 type BookDetail = BookQuery["book"];
@@ -135,7 +136,10 @@ function BookOcrTab({
           <BookPageSection key={page.path} page={page}>
             <PageOcrTab
               pagePath={page.path}
-              sourceImageUrl={page.sourceImageUrl}
+              sourceImageUrl={appendMediaCacheBuster(
+                page.sourceImageUrl,
+                page.updatedAt,
+              )}
               sourceImageDimensions={getSourceImageDimensions(page)}
               ocrRawJson={page.ocrRawJson ?? null}
               blocks={blocks}
@@ -173,7 +177,10 @@ function BookTranslationTab({
           <BookPageSection key={page.path} page={page}>
             <PageTranslationTab
               pagePath={page.path}
-              sourceImageUrl={page.sourceImageUrl}
+              sourceImageUrl={appendMediaCacheBuster(
+                page.sourceImageUrl,
+                page.updatedAt,
+              )}
               sourceImageDimensions={getSourceImageDimensions(page)}
               blocks={page.blocks}
               translationSourceLanguages={

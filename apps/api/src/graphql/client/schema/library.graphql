@@ -176,6 +176,10 @@ input UpdatePageInput {
   settings: PageSettingsInput
 }
 
+input OverwritePageSourceImageInput {
+  sourceUploadId: String!
+}
+
 input UpdatePageSegmentTextWithReadingInput {
   blockId: ID!
   segmentId: ID!
@@ -218,6 +222,10 @@ extend type Mutation {
   updateBook(path: String!, input: UpdateBookInput!): Book!
   createPage(input: CreatePageInput!): Page!
   updatePage(path: String!, input: UpdatePageInput!): Page!
+  overwritePageSourceImage(
+    path: String!
+    input: OverwritePageSourceImageInput!
+  ): Page!
   updatePageSegmentSourceText(
     path: String!
     input: UpdatePageSegmentSourceTextInput!

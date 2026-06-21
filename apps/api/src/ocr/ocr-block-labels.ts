@@ -11,7 +11,6 @@ const TEXT_OCR_BLOCK_LABELS = [
   "doc_title",
   "footnote",
   "header",
-  "algorithm",
   "footer",
   "chart_title",
   "aside_text",

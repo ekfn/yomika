@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import type { BookQuery } from "@/graphql/generated/graphql";
 import { getPageRoute } from "@/lib/library-paths";
+import { appendMediaCacheBuster } from "@/lib/media-url";
 import { PageProcessingStatusBadges } from "@/features/pages/components/page-processing-status-badges";
 
 type BookDetail = BookQuery["book"];
@@ -93,7 +94,10 @@ function LanguageBadges({ languages }: { languages: readonly string[] }) {
 }
 
 function BookInfoPagePreview({ page }: { page: BookInfoPage }) {
-  const sourcePreviewUrl = page.sourceImagePreviewUrl ?? page.sourceImageUrl;
+  const sourcePreviewUrl = appendMediaCacheBuster(
+    page.sourceImagePreviewUrl ?? page.sourceImageUrl,
+    page.updatedAt,
+  );
   const sourcePreviewDimensions = getPagePreviewImageDimensions(page);
 
   return (

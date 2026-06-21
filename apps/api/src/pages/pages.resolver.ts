@@ -31,6 +31,10 @@ type UpdatePageInput = {
   } | null;
 };
 
+type OverwritePageSourceImageInput = {
+  sourceUploadId: string;
+};
+
 type UpdatePageSegmentTextWithReadingInput = {
   blockId: string;
   segmentId: string;
@@ -77,6 +81,14 @@ export class PagesResolver {
     @Args("input") input: UpdatePageInput,
   ): Promise<PageOutput> {
     return this.pagesService.updatePage(path, input);
+  }
+
+  @Mutation("overwritePageSourceImage")
+  overwritePageSourceImage(
+    @Args("path") path: string,
+    @Args("input") input: OverwritePageSourceImageInput,
+  ): Promise<PageOutput> {
+    return this.pagesService.overwritePageSourceImage(path, input);
   }
 
   @Mutation("updatePageSegmentTextWithReading")
