@@ -1068,19 +1068,22 @@ export class PaddleOcrClient {
       });
     }
 
-    const contentFocusedImage = await focusImageOnDetectedTextContent({
-      paddleOcrVlBaseUrl: this.config.paddleOcrVlBaseUrl,
-      normalizedImage,
-      sourceImagePath,
-    });
+    const ocrImage =
+      this.config.ocrProfile === "fast"
+        ? normalizedImage
+        : await focusImageOnDetectedTextContent({
+            paddleOcrVlBaseUrl: this.config.paddleOcrVlBaseUrl,
+            normalizedImage,
+            sourceImagePath,
+          });
     const formData = new FormData();
 
     formData.append(
       "file",
-      new Blob([toBlobPart(contentFocusedImage.buffer)], {
-        type: contentFocusedImage.mimeType,
+      new Blob([toBlobPart(ocrImage.buffer)], {
+        type: ocrImage.mimeType,
       }),
-      buildOcrUploadFilename(sourceImagePath, contentFocusedImage.mimeType),
+      buildOcrUploadFilename(sourceImagePath, ocrImage.mimeType),
     );
 
     let response: Response;
@@ -1113,8 +1116,13 @@ export class PaddleOcrClient {
 
     const normalizedOcrResult = normalizeOcrResultCoordinates(
       result,
-      contentFocusedImage.transform,
+      ocrImage.transform,
     );
+
+    if (this.config.ocrProfile === "fast") {
+      return normalizedOcrResult;
+    }
+
     const imageBlockTextByExternalBlockId = await recognizeImageBlockText({
       paddleOcrVlBaseUrl: this.config.paddleOcrVlBaseUrl,
       sourceImageBuffer,

@@ -7,6 +7,18 @@ const booleanEnvSchema = z
   .transform((value) => value === "true");
 
 const portEnvSchema = z.coerce.number().int().min(1).max(65_535);
+const ocrProfileEnvSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmedValue = value.trim();
+
+    return trimmedValue === "" ? undefined : trimmedValue.toLowerCase();
+  },
+  z.enum(["full", "fast"]).default("full"),
+);
 const LIBRARY_DIR = "library";
 const RUNNER_STATE_DIR = "runtime/runner";
 const AI_PROCESSING_CONFIG_PATH = "runtime/ai-processing-config.json";
@@ -25,8 +37,11 @@ const envSchema = z.object({
   TRANSLATION_TARGET_DEFAULT_LANGUAGE: z.string().min(1),
   VOCABULARY_ENABLED_BY_DEFAULT: booleanEnvSchema,
   PADDLEOCR_VL_BASE_URL: z.string().url(),
+  OCR_PROFILE: ocrProfileEnvSchema,
   GEMINI_API_KEY: z.string().min(1),
 });
+
+export type OcrProfile = z.infer<typeof ocrProfileEnvSchema>;
 
 export type AppConfig = {
   appPassword: string;
@@ -45,6 +60,7 @@ export type AppConfig = {
   aiProcessingEnabled: boolean;
   vocabularyEnabled: boolean;
   paddleOcrVlBaseUrl: string;
+  ocrProfile: OcrProfile;
   geminiApiKey: string;
 };
 
@@ -83,6 +99,7 @@ export function loadAppConfig(projectRoot = findProjectRoot()): AppConfig {
     aiProcessingEnabled: AI_PROCESSING_ENABLED_DEFAULT,
     vocabularyEnabled: env.VOCABULARY_ENABLED_BY_DEFAULT,
     paddleOcrVlBaseUrl: env.PADDLEOCR_VL_BASE_URL,
+    ocrProfile: env.OCR_PROFILE,
     geminiApiKey: env.GEMINI_API_KEY,
   };
 }

@@ -1,4 +1,5 @@
 const OCR_RUNTIME_VALUES = new Set(["cpu", "gpu"]);
+const OCR_PROFILE_VALUES = new Set(["full", "fast"]);
 const LOCAL_OCR_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 export function loadOcrRuntime() {
@@ -15,6 +16,22 @@ export function loadOcrRuntime() {
   }
 
   return runtime;
+}
+
+export function loadOcrProfile() {
+  const rawProfile = process.env.OCR_PROFILE;
+
+  if (!rawProfile || rawProfile.trim() === "") {
+    return "full";
+  }
+
+  const profile = rawProfile.trim().toLowerCase();
+
+  if (!OCR_PROFILE_VALUES.has(profile)) {
+    throw new Error("OCR_PROFILE must be either full or fast.");
+  }
+
+  return profile;
 }
 
 export function loadPaddleOcrVlBaseUrl() {

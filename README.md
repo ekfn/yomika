@@ -87,6 +87,9 @@ Edit `.env` before starting the app. At minimum, set:
 - `TRANSLATION_TARGET_DEFAULT_LANGUAGE`
 - `OCR_RUNTIME`
 
+`OCR_PROFILE` is optional. Use `full` for the most complete OCR flow. Use `fast`
+to skip extra OCR passes.
+
 Install dependencies:
 
 ```bash
@@ -158,6 +161,7 @@ AI and OCR:
 | `GEMINI_API_KEY`        | Gemini API key for AI processing      |
 | `PADDLEOCR_VL_BASE_URL` | Local PaddleOCR wrapper URL with port |
 | `OCR_RUNTIME`           | OCR runtime mode: `cpu` or `gpu`      |
+| `OCR_PROFILE`           | OCR profile: `full` or `fast`         |
 
 ## Update
 

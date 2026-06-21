@@ -2,14 +2,20 @@ import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadOcrRuntime, loadPaddleOcrVlBaseUrl } from "./ocr-env.mjs";
+import {
+  loadOcrProfile,
+  loadOcrRuntime,
+  loadPaddleOcrVlBaseUrl,
+} from "./ocr-env.mjs";
 
 const projectRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 let mode;
+let profile;
 let paddleOcrVlBaseUrl;
 
 try {
   mode = loadOcrRuntime();
+  profile = loadOcrProfile();
   paddleOcrVlBaseUrl = loadPaddleOcrVlBaseUrl();
 } catch (error) {
   console.error(error.message);
@@ -47,6 +53,7 @@ const result = spawnSync(
     env: {
       ...process.env,
       YOMIKA_OCR_DEVICE: mode,
+      YOMIKA_OCR_PROFILE: profile,
     },
     stdio: "inherit",
   },

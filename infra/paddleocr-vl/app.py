@@ -13,9 +13,13 @@ request_semaphore = asyncio.Semaphore(1)
 OCR_CPU_THREADS = 16
 OCR_MKLDNN_CACHE_CAPACITY = 32
 OCR_DEVICE = os.getenv("YOMIKA_OCR_DEVICE", "cpu").strip().lower()
+OCR_PROFILE = os.getenv("YOMIKA_OCR_PROFILE", "full").strip().lower()
 
 if OCR_DEVICE not in ("cpu", "gpu"):
     raise RuntimeError("YOMIKA_OCR_DEVICE must be either 'cpu' or 'gpu'.")
+
+if OCR_PROFILE not in ("full", "fast"):
+    raise RuntimeError("YOMIKA_OCR_PROFILE must be either 'full' or 'fast'.")
 
 PADDLE_OCR_CPU_ARGS = {
     "device": "cpu",
@@ -49,14 +53,23 @@ pipeline = PaddleOCRVL(
     **PADDLE_OCR_VL_FEATURE_OPTIONS,
     pipeline_version="v1.6",
 )
-text_presence_pipeline = PaddleOCR(
-    **PADDLE_OCR_STATIC_ENGINE_ARGS,
-    use_doc_orientation_classify=False,
-    use_doc_unwarping=False,
-    use_textline_orientation=False,
-    lang="japan",
-    ocr_version="PP-OCRv5",
-)
+text_presence_pipeline = None
+
+
+def get_text_presence_pipeline():
+    global text_presence_pipeline
+
+    if text_presence_pipeline is None:
+        text_presence_pipeline = PaddleOCR(
+            **PADDLE_OCR_STATIC_ENGINE_ARGS,
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+            lang="japan",
+            ocr_version="PP-OCRv5",
+        )
+
+    return text_presence_pipeline
 
 
 def get_result_payload(result):
@@ -352,7 +365,9 @@ async def run_text_detection_ocr(
                 workdir = Path(workdir_name)
                 input_path = workdir / f"source{suffix}"
                 input_path.write_bytes(payload)
-                results = list(text_presence_pipeline.predict(input=str(input_path)))
+                results = list(
+                    get_text_presence_pipeline().predict(input=str(input_path))
+                )
 
                 return parse_text_detection_results(results)
         except HTTPException:
@@ -382,7 +397,7 @@ async def run_text_image_ocr(
                 input_path = workdir / f"source{suffix}"
                 input_path.write_bytes(payload)
                 text_presence_results = list(
-                    text_presence_pipeline.predict(input=str(input_path))
+                    get_text_presence_pipeline().predict(input=str(input_path))
                 )
 
                 if not has_plain_ocr_text(text_presence_results):
