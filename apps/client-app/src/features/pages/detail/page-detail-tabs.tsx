@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { PageInfoTab } from "./page-info-tab";
 import { PageOcrTab } from "./page-ocr-tab";
@@ -19,6 +19,12 @@ const DEFAULT_PAGE_DETAIL_TAB_VALUE = "translation";
 
 type PageDetailTabValue = (typeof PAGE_DETAIL_TAB_VALUES)[number];
 
+const PAGE_DETAIL_TAB_LABELS = {
+  info: "Info",
+  ocr: "OCR blocks",
+  translation: "Translation",
+} satisfies Record<PageDetailTabValue, string>;
+
 function isPageDetailTabValue(
   value: string | null,
 ): value is PageDetailTabValue {
@@ -29,6 +35,17 @@ function getPageDetailTabValue(value: string | null): PageDetailTabValue {
   return isPageDetailTabValue(value) ? value : DEFAULT_PAGE_DETAIL_TAB_VALUE;
 }
 
+function getPageDetailTabSearch(
+  searchParams: URLSearchParams,
+  tabValue: PageDetailTabValue,
+) {
+  const nextSearchParams = new URLSearchParams(searchParams);
+
+  nextSearchParams.set(PAGE_DETAIL_TAB_SEARCH_PARAM, tabValue);
+
+  return `?${nextSearchParams.toString()}`;
+}
+
 export function PageDetailTabs({
   page,
   sourceImageUrl,
@@ -36,32 +53,34 @@ export function PageDetailTabs({
   selectedBlockId,
   onSelectBlock,
 }: PageDetailTabsProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const selectedTab = getPageDetailTabValue(
     searchParams.get(PAGE_DETAIL_TAB_SEARCH_PARAM),
   );
 
   return (
-    <Tabs
-      value={selectedTab}
-      onValueChange={(value) => {
-        const tabValue = getPageDetailTabValue(value);
-
-        setSearchParams((currentSearchParams) => {
-          const nextSearchParams = new URLSearchParams(currentSearchParams);
-
-          nextSearchParams.set(PAGE_DETAIL_TAB_SEARCH_PARAM, tabValue);
-
-          return nextSearchParams;
-        });
-      }}
-      className="gap-5"
-    >
+    <Tabs value={selectedTab} className="gap-5">
       <div className="overflow-x-auto pb-1.5">
         <TabsList variant="line" className="min-w-max">
-          <TabsTrigger value="info">Info</TabsTrigger>
-          <TabsTrigger value="ocr">OCR blocks</TabsTrigger>
-          <TabsTrigger value="translation">Translation</TabsTrigger>
+          {PAGE_DETAIL_TAB_VALUES.map((tabValue) => (
+            <TabsTrigger key={tabValue} value={tabValue} asChild>
+              <Link
+                to={{
+                  pathname: location.pathname,
+                  search: getPageDetailTabSearch(searchParams, tabValue),
+                  hash: location.hash,
+                }}
+                onClick={(event) => {
+                  if (tabValue === selectedTab) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                {PAGE_DETAIL_TAB_LABELS[tabValue]}
+              </Link>
+            </TabsTrigger>
+          ))}
         </TabsList>
       </div>
 

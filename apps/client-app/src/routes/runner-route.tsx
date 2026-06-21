@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { useMutation, useQuery } from "@apollo/client/react";
 import { Loader2, Play, Square } from "lucide-react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   RunnerState,
   RunnerStatusDocument,
@@ -16,10 +16,47 @@ import { RunnerStatusTabContent } from "@/features/runner/components/runner-stat
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type RunnerTab = "status" | "ai-processing" | "model-options" | "logs";
+const RUNNER_TAB_SEARCH_PARAM = "tab";
+const RUNNER_TAB_VALUES = [
+  "status",
+  "ai-processing",
+  "model-options",
+  "logs",
+] as const;
+const DEFAULT_RUNNER_TAB_VALUE = "status";
+
+type RunnerTab = (typeof RUNNER_TAB_VALUES)[number];
+
+const RUNNER_TAB_LABELS = {
+  status: "Status",
+  "ai-processing": "AI Processing Settings",
+  "model-options": "Models",
+  logs: "Logs",
+} satisfies Record<RunnerTab, string>;
+
+function isRunnerTab(value: string | null): value is RunnerTab {
+  return RUNNER_TAB_VALUES.some((tabValue) => tabValue === value);
+}
+
+function getRunnerTab(value: string | null): RunnerTab {
+  return isRunnerTab(value) ? value : DEFAULT_RUNNER_TAB_VALUE;
+}
+
+function getRunnerTabSearch(
+  searchParams: URLSearchParams,
+  tabValue: RunnerTab,
+) {
+  const nextSearchParams = new URLSearchParams(searchParams);
+
+  nextSearchParams.set(RUNNER_TAB_SEARCH_PARAM, tabValue);
+
+  return `?${nextSearchParams.toString()}`;
+}
 
 export function RunnerRoute() {
-  const [activeTab, setActiveTab] = useState<RunnerTab>("status");
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const activeTab = getRunnerTab(searchParams.get(RUNNER_TAB_SEARCH_PARAM));
   const { data, loading, error, refetch } = useQuery(RunnerStatusDocument);
   const [startRunner, startState] = useMutation(StartRunnerDocument);
   const [requestRunnerStop, stopState] = useMutation(RequestRunnerStopDocument);
@@ -74,21 +111,27 @@ export function RunnerRoute() {
         </div>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => {
-          setActiveTab(value as RunnerTab);
-        }}
-        className="gap-5"
-      >
+      <Tabs value={activeTab} className="gap-5">
         <div className="overflow-x-auto pb-1.5">
           <TabsList variant="line" className="min-w-max">
-            <TabsTrigger value="status">Status</TabsTrigger>
-            <TabsTrigger value="ai-processing">
-              AI Processing Settings
-            </TabsTrigger>
-            <TabsTrigger value="model-options">Models</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
+            {RUNNER_TAB_VALUES.map((tabValue) => (
+              <TabsTrigger key={tabValue} value={tabValue} asChild>
+                <Link
+                  to={{
+                    pathname: location.pathname,
+                    search: getRunnerTabSearch(searchParams, tabValue),
+                    hash: location.hash,
+                  }}
+                  onClick={(event) => {
+                    if (tabValue === activeTab) {
+                      event.preventDefault();
+                    }
+                  }}
+                >
+                  {RUNNER_TAB_LABELS[tabValue]}
+                </Link>
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
 

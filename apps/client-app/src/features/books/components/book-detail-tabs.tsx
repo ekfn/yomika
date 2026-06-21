@@ -1,6 +1,6 @@
 import { FileTextIcon } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { getPageDisplayName } from "@yomika/shared";
 import { PageOcrTab } from "@/features/pages/detail/page-ocr-tab";
 import { PageTranslationTab } from "@/features/pages/detail/page-translation-tab";
@@ -35,6 +35,12 @@ const BOOK_DETAIL_PAGE_SCROLL_DELAY_MS = 50;
 type BookDetailTabValue = (typeof BOOK_DETAIL_TAB_VALUES)[number];
 type SelectedBlockIdsByPagePath = Readonly<Record<string, string | null>>;
 
+const BOOK_DETAIL_TAB_LABELS = {
+  info: "Info",
+  ocr: "OCR blocks",
+  translation: "Translation",
+} satisfies Record<BookDetailTabValue, string>;
+
 function isBookDetailTabValue(
   value: string | null,
 ): value is BookDetailTabValue {
@@ -43,6 +49,18 @@ function isBookDetailTabValue(
 
 function getBookDetailTabValue(value: string | null): BookDetailTabValue {
   return isBookDetailTabValue(value) ? value : DEFAULT_BOOK_DETAIL_TAB_VALUE;
+}
+
+function getBookDetailTabSearch(
+  searchParams: URLSearchParams,
+  tabValue: BookDetailTabValue,
+) {
+  const nextSearchParams = new URLSearchParams(searchParams);
+
+  nextSearchParams.set(BOOK_DETAIL_TAB_SEARCH_PARAM, tabValue);
+  nextSearchParams.delete(BOOK_DETAIL_PAGE_SEARCH_PARAM);
+
+  return `?${nextSearchParams.toString()}`;
 }
 
 function getPageDisplayTitle(page: BookPage) {
@@ -229,7 +247,8 @@ export function BookDetailTabs({
   book: BookDetail;
   onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
 }) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const selectedTab = getBookDetailTabValue(
     searchParams.get(BOOK_DETAIL_TAB_SEARCH_PARAM),
   );
@@ -277,27 +296,27 @@ export function BookDetailTabs({
   }, [book.path, selectedTab, targetPagePath]);
 
   return (
-    <Tabs
-      value={selectedTab}
-      onValueChange={(value) => {
-        const tabValue = getBookDetailTabValue(value);
-
-        setSearchParams((currentSearchParams) => {
-          const nextSearchParams = new URLSearchParams(currentSearchParams);
-
-          nextSearchParams.set(BOOK_DETAIL_TAB_SEARCH_PARAM, tabValue);
-          nextSearchParams.delete(BOOK_DETAIL_PAGE_SEARCH_PARAM);
-
-          return nextSearchParams;
-        });
-      }}
-      className="gap-5"
-    >
+    <Tabs value={selectedTab} className="gap-5">
       <div className="overflow-x-auto pb-1.5">
         <TabsList variant="line" className="min-w-max">
-          <TabsTrigger value="info">Info</TabsTrigger>
-          <TabsTrigger value="ocr">OCR blocks</TabsTrigger>
-          <TabsTrigger value="translation">Translation</TabsTrigger>
+          {BOOK_DETAIL_TAB_VALUES.map((tabValue) => (
+            <TabsTrigger key={tabValue} value={tabValue} asChild>
+              <Link
+                to={{
+                  pathname: location.pathname,
+                  search: getBookDetailTabSearch(searchParams, tabValue),
+                  hash: location.hash,
+                }}
+                onClick={(event) => {
+                  if (tabValue === selectedTab) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                {BOOK_DETAIL_TAB_LABELS[tabValue]}
+              </Link>
+            </TabsTrigger>
+          ))}
         </TabsList>
       </div>
 
