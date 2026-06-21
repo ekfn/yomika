@@ -40,6 +40,10 @@ pipeline = PaddleOCRVL(
     use_doc_unwarping=True,
 )
 text_presence_pipeline = PaddleOCR(
+    device="cpu",
+    enable_mkldnn=True,
+    mkldnn_cache_capacity=PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY,
+    cpu_threads=PADDLEOCR_VL_CPU_THREADS,
     use_doc_orientation_classify=False,
     use_doc_unwarping=False,
     use_textline_orientation=False,

@@ -164,10 +164,12 @@ Translation defaults:
 
 AI and OCR:
 
-| Variable                | Purpose                              |
-| ----------------------- | ------------------------------------ |
-| `GEMINI_API_KEY`        | Gemini API key for AI processing     |
-| `PADDLEOCR_VL_BASE_URL` | PaddleOCR wrapper URL used by Yomika |
+| Variable                             | Purpose                                 |
+| ------------------------------------ | --------------------------------------- |
+| `GEMINI_API_KEY`                     | Gemini API key for AI processing        |
+| `PADDLEOCR_VL_BASE_URL`              | PaddleOCR wrapper URL used by Yomika    |
+| `PADDLEOCR_VL_CPU_THREADS`           | CPU threads used by the OCR wrapper     |
+| `PADDLEOCR_VL_MKLDNN_CACHE_CAPACITY` | MKLDNN cache capacity for OCR pipelines |
 
 ## Update
 
