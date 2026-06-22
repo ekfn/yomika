@@ -7,8 +7,7 @@ export function buildVocabularyPrompt(input: AiVocabularyInput): string {
 
 ## Goal
 
-Extract useful source-language vocabulary entries for each segment and translate
-each entry into ${input.targetLanguage}.
+Extract useful source-language vocabulary entries for each segment and translate each entry into \`${input.targetLanguage}\` language.
 
 ## Workflow
 
@@ -23,7 +22,7 @@ each entry into ${input.targetLanguage}.
 - Return every target segment exactly once.
 - If a segment has no useful vocabulary items, return an empty \`vocabulary\` array for that segment.
 - \`vocabulary[].text\` is the source word or short phrase.
-- \`vocabulary[].translation\` is the natural translation of that word or phrase into ${input.targetLanguage}.
+- \`vocabulary[].translation\` is the natural translation of that word or phrase into \`${input.targetLanguage}\` language.
 - Prefer meaningful vocabulary items over particles, punctuation, generic numbers, and trivial function words.
 - Do not duplicate equivalent vocabulary items within the same segment.
 - Do not invent words that are not present in \`textWithReading\`.
@@ -49,15 +48,15 @@ output:
       "vocabulary": [
         {
           "text": "一寸法師（いっすんぼうし）",
-          "translation": "Иссумбоси"
+          "translation": "..."
         },
         {
           "text": "体（からだ）",
-          "translation": "тело"
+          "translation": "..."
         },
         {
           "text": "旅（たび）に出（で）る",
-          "translation": "отправляться в путешествие"
+          "translation": "..."
         }
       ]
     }
@@ -72,12 +71,6 @@ output:
 - Translating the whole segment instead of individual words or short phrases.
 - Using ASCII parentheses \`()\` instead of full-width parentheses \`（\` and \`）\`.
 - Adding comments, explanations, or metadata into \`vocabulary[].translation\`.
-
-## Source Languages
-
-\`\`\`json
-${JSON.stringify(input.sourceLanguages, null, 2)}
-\`\`\`
 
 ## Target Segments
 

@@ -7,7 +7,7 @@ export function buildTranslationPrompt(input: AiTranslateInput): string {
 
 ## Goal
 
-Provide each source text with inline readings and translate into ${input.context.targetLanguage}.
+Provide each source text with inline readings and translate into \`${input.context.targetLanguage}\` language.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ Provide each source text with inline readings and translate into ${input.context
 ## Rules
 
 - Return every target segment exactly once.
-- \`translation\` is the natural translation of the segment's whole \`text\` into ${input.context.targetLanguage}.
+- \`translation\` is the natural translation of the segment's whole \`text\` into \`${input.context.targetLanguage}\` language.
 - Do not add comments or meta text into translation.
 - \`textWithReading\` must preserve the whole segment \`text\` and add readings inline where useful; do not change the source text.
 - For Japanese, keep kana and punctuation as in the source text, annotate kanji-containing chunks as \`漢字（かんじ）\`, and write readings in hiragana.
@@ -43,7 +43,7 @@ ouput:
   id: '0.0',
   text: '3個の荷物を受け取ってから、TomにOKメールを送りましたか。',
   textWithReading: '3個（こ）の荷物（にもつ）を受（う）け取（と）ってから、TomにOKメールを送（おく）りましたか。',
-  translation: 'После того как Вы получили 3 посылки, Вы отправили Tom OK-письмо?'
+  translation: '...'
 }
 \`\`\`
 
