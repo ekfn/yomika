@@ -45,16 +45,21 @@ fragment RunnerOperationLogEntryFields on RunnerOperationLogEntry {
 }
 
 fragment AiProcessingConfigFields on AiProcessingConfig {
-  modelOptions {
-    id
-    thinkingMode
+  models {
+    provider
+    modelId
     requestsPerMinute
+    profiles {
+      name
+      parametersJson
+    }
   }
   steps {
     step
     models {
+      provider
       modelId
-      thinkingLevel
+      profileName
     }
   }
 }

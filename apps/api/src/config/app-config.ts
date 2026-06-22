@@ -5,6 +5,11 @@ const booleanEnvSchema = z
   .enum(["true", "false"])
   .default("false")
   .transform((value) => value === "true");
+const optionalSecretEnvSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value && value.length > 0 ? value : undefined));
 
 const portEnvSchema = z.coerce.number().int().min(1).max(65_535);
 const ocrProfileEnvSchema = z.preprocess(
@@ -38,7 +43,8 @@ const envSchema = z.object({
   VOCABULARY_ENABLED_BY_DEFAULT: booleanEnvSchema,
   PADDLEOCR_VL_BASE_URL: z.string().url(),
   OCR_PROFILE: ocrProfileEnvSchema,
-  GEMINI_API_KEY: z.string().min(1),
+  GEMINI_API_KEY: optionalSecretEnvSchema,
+  GITHUB_MODELS_TOKEN: optionalSecretEnvSchema,
 });
 
 export type OcrProfile = z.infer<typeof ocrProfileEnvSchema>;
@@ -61,7 +67,8 @@ export type AppConfig = {
   vocabularyEnabled: boolean;
   paddleOcrVlBaseUrl: string;
   ocrProfile: OcrProfile;
-  geminiApiKey: string;
+  geminiApiKey: string | undefined;
+  githubModelsToken: string | undefined;
 };
 
 export function loadAppConfig(projectRoot = findProjectRoot()): AppConfig {
@@ -101,6 +108,7 @@ export function loadAppConfig(projectRoot = findProjectRoot()): AppConfig {
     paddleOcrVlBaseUrl: env.PADDLEOCR_VL_BASE_URL,
     ocrProfile: env.OCR_PROFILE,
     geminiApiKey: env.GEMINI_API_KEY,
+    githubModelsToken: env.GITHUB_MODELS_TOKEN,
   };
 }
 

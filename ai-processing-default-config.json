@@ -1,69 +1,126 @@
 {
-  "modelOptions": [
+  "models": [
     {
-      "id": "gemini-2.5-flash",
-      "thinkingMode": "BUDGET",
-      "requestsPerMinute": 5
+      "provider": "github-models",
+      "modelId": "openai/gpt-4.1",
+      "requestsPerMinute": 10,
+      "profiles": [
+        {
+          "name": "Default",
+          "parametersJson": ""
+        }
+      ]
     },
     {
-      "id": "gemini-2.5-flash-lite",
-      "thinkingMode": "BUDGET",
-      "requestsPerMinute": 5
+      "provider": "github-models",
+      "modelId": "openai/gpt-4.1-mini",
+      "requestsPerMinute": 10,
+      "profiles": [
+        {
+          "name": "Default",
+          "parametersJson": ""
+        }
+      ]
     },
     {
-      "id": "gemini-3-flash-preview",
-      "thinkingMode": "LEVEL",
-      "requestsPerMinute": 5
+      "provider": "github-models",
+      "modelId": "openai/gpt-4o",
+      "requestsPerMinute": 10,
+      "profiles": [
+        {
+          "name": "Default",
+          "parametersJson": ""
+        }
+      ]
     },
     {
-      "id": "gemini-3.1-flash-lite",
-      "thinkingMode": "LEVEL",
-      "requestsPerMinute": 15
+      "provider": "github-models",
+      "modelId": "openai/gpt-4o-mini",
+      "requestsPerMinute": 10,
+      "profiles": [
+        {
+          "name": "Default",
+          "parametersJson": ""
+        }
+      ]
     },
     {
-      "id": "gemini-3.5-flash",
-      "thinkingMode": "LEVEL",
-      "requestsPerMinute": 5
+      "provider": "gemini",
+      "modelId": "gemini-3.5-flash",
+      "requestsPerMinute": 5,
+      "profiles": [
+        {
+          "name": "Default",
+          "parametersJson": "{\"thinkingConfig\":{\"thinkingLevel\":\"HIGH\"}}"
+        }
+      ]
+    },
+    {
+      "provider": "gemini",
+      "modelId": "gemini-3.1-flash-lite",
+      "requestsPerMinute": 15,
+      "profiles": [
+        {
+          "name": "Default",
+          "parametersJson": "{\"thinkingConfig\":{\"thinkingLevel\":\"HIGH\"}}"
+        }
+      ]
     }
   ],
   "steps": {
     "cleanup": {
       "models": [
         {
-          "modelId": "gemini-3.1-flash-lite",
-          "thinkingLevel": "HIGH"
+          "provider": "github-models",
+          "modelId": "openai/gpt-4.1-mini",
+          "profileName": "Default"
+        },
+        {
+          "provider": "github-models",
+          "modelId": "openai/gpt-4o-mini",
+          "profileName": "Default"
         }
       ]
     },
     "split": {
       "models": [
         {
-          "modelId": "gemini-3.1-flash-lite",
-          "thinkingLevel": "HIGH"
+          "provider": "github-models",
+          "modelId": "openai/gpt-4.1-mini",
+          "profileName": "Default"
+        },
+        {
+          "provider": "github-models",
+          "modelId": "openai/gpt-4o-mini",
+          "profileName": "Default"
         }
       ]
     },
     "translation": {
       "models": [
         {
-          "modelId": "gemini-3.5-flash",
-          "thinkingLevel": "HIGH"
+          "provider": "github-models",
+          "modelId": "openai/gpt-4.1",
+          "profileName": "Default"
         },
         {
-          "modelId": "gemini-2.5-flash",
-          "thinkingLevel": null
-        },
-        {
-          "modelId": "gemini-3.1-flash-lite",
-          "thinkingLevel": "HIGH"
+          "provider": "github-models",
+          "modelId": "openai/gpt-4o",
+          "profileName": "Default"
         }
       ]
     },
     "vocabulary": {
       "models": [
         {
-          "modelId": "gemini-3.1-flash-lite",
-          "thinkingLevel": "HIGH"
+          "provider": "github-models",
+          "modelId": "openai/gpt-4.1-mini",
+          "profileName": "Default"
+        },
+        {
+          "provider": "github-models",
+          "modelId": "openai/gpt-4o-mini",
+          "profileName": "Default"
         }
       ]
     }

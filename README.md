@@ -82,7 +82,7 @@ Edit `.env` before starting the app. At minimum, set:
 
 - `APP_PASSWORD`
 - `SESSION_SECRET`
-- `GEMINI_API_KEY`
+- `GITHUB_MODELS_TOKEN` or `GEMINI_API_KEY`
 - `TRANSLATION_SOURCE_DEFAULT_LANGUAGES`
 - `TRANSLATION_TARGET_DEFAULT_LANGUAGE`
 - `OCR_RUNTIME`
@@ -158,7 +158,8 @@ AI and OCR:
 
 | Variable                | Purpose                               |
 | ----------------------- | ------------------------------------- |
-| `GEMINI_API_KEY`        | Gemini API key for AI processing      |
+| `GITHUB_MODELS_TOKEN`   | GitHub token for GitHub Models        |
+| `GEMINI_API_KEY`        | Gemini API key for Gemini models      |
 | `PADDLEOCR_VL_BASE_URL` | Local PaddleOCR wrapper URL with port |
 | `OCR_RUNTIME`           | OCR runtime mode: `cpu` or `gpu`      |
 | `OCR_PROFILE`           | OCR profile: `full` or `fast`         |

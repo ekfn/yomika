@@ -10,23 +10,26 @@ export const AI_PROCESSING_OPERATION_VALUES = [
 export type AiProcessingOperation =
   (typeof AI_PROCESSING_OPERATION_VALUES)[number];
 
-export const AI_THINKING_MODE_VALUES = ["BUDGET", "LEVEL"] as const;
+export const AI_MODEL_PROVIDER_VALUES = ["gemini", "github-models"] as const;
 
-export type AiThinkingMode = (typeof AI_THINKING_MODE_VALUES)[number];
+export type AiModelProvider = (typeof AI_MODEL_PROVIDER_VALUES)[number];
 
-export const AI_THINKING_LEVEL_VALUES = ["LOW", "MEDIUM", "HIGH"] as const;
+const aiModelProfileJsonSchema = z.object({
+  name: z.string().trim().min(1),
+  parametersJson: z.string().default(""),
+});
 
-export type AiThinkingLevel = (typeof AI_THINKING_LEVEL_VALUES)[number];
-
-const aiModelOptionJsonSchema = z.object({
-  id: z.string().trim().min(1),
-  thinkingMode: z.enum(AI_THINKING_MODE_VALUES),
+const aiModelJsonSchema = z.object({
+  provider: z.enum(AI_MODEL_PROVIDER_VALUES),
+  modelId: z.string().trim().min(1),
   requestsPerMinute: z.number().int().min(1),
+  profiles: z.array(aiModelProfileJsonSchema).min(1),
 });
 
 const aiProcessingStepModelConfigJsonSchema = z.object({
+  provider: z.enum(AI_MODEL_PROVIDER_VALUES),
   modelId: z.string().trim().min(1),
-  thinkingLevel: z.enum(AI_THINKING_LEVEL_VALUES).nullable().default(null),
+  profileName: z.string().trim().min(1),
 });
 
 const aiProcessingStepConfigJsonSchema = z.object({
@@ -34,7 +37,7 @@ const aiProcessingStepConfigJsonSchema = z.object({
 });
 
 export const aiProcessingConfigJsonSchema = z.object({
-  modelOptions: z.array(aiModelOptionJsonSchema).min(1),
+  models: z.array(aiModelJsonSchema).min(1),
   steps: z.object({
     cleanup: aiProcessingStepConfigJsonSchema,
     split: aiProcessingStepConfigJsonSchema,
@@ -43,7 +46,8 @@ export const aiProcessingConfigJsonSchema = z.object({
   }),
 });
 
-export type AiModelOptionJson = z.infer<typeof aiModelOptionJsonSchema>;
+export type AiModelJson = z.infer<typeof aiModelJsonSchema>;
+export type AiModelProfileJson = z.infer<typeof aiModelProfileJsonSchema>;
 export type AiProcessingStepModelConfigJson = z.infer<
   typeof aiProcessingStepModelConfigJsonSchema
 >;

@@ -3,20 +3,37 @@ schema {
   mutation: Mutation
 }
 
-type AiModelOption {
-  id: ID!
+type AiModel {
+  modelId: String!
+  profiles: [AiModelProfile!]!
+  provider: AiModelProvider!
   requestsPerMinute: Int!
-  thinkingMode: AiThinkingMode!
 }
 
-input AiModelOptionInput {
-  id: ID!
+input AiModelInput {
+  modelId: String!
+  profiles: [AiModelProfileInput!]!
+  provider: AiModelProvider!
   requestsPerMinute: Int!
-  thinkingMode: AiThinkingMode!
+}
+
+type AiModelProfile {
+  name: String!
+  parametersJson: String!
+}
+
+input AiModelProfileInput {
+  name: String!
+  parametersJson: String!
+}
+
+enum AiModelProvider {
+  GEMINI
+  GITHUB_MODELS
 }
 
 type AiProcessingConfig {
-  modelOptions: [AiModelOption!]!
+  models: [AiModel!]!
   steps: [AiProcessingStepConfig!]!
 }
 
@@ -51,23 +68,14 @@ input AiProcessingStepConfigInput {
 
 type AiProcessingStepModelConfig {
   modelId: String!
-  thinkingLevel: AiThinkingLevel
+  profileName: String!
+  provider: AiModelProvider!
 }
 
 input AiProcessingStepModelConfigInput {
   modelId: String!
-  thinkingLevel: AiThinkingLevel
-}
-
-enum AiThinkingLevel {
-  HIGH
-  LOW
-  MEDIUM
-}
-
-enum AiThinkingMode {
-  BUDGET
-  LEVEL
+  profileName: String!
+  provider: AiModelProvider!
 }
 
 type Book {
@@ -346,7 +354,7 @@ type TranslationSegment {
 }
 
 input UpdateAiProcessingConfigInput {
-  modelOptions: [AiModelOptionInput!]!
+  models: [AiModelInput!]!
   steps: [AiProcessingStepConfigInput!]!
 }
 

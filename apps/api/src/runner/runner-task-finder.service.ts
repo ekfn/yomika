@@ -193,7 +193,7 @@ export class RunnerTaskFinderService {
         AI_PROCESSING_OPERATION_BY_TASK_TYPE[taskType],
       );
     const hasAvailableModels = this.aiModelRunState.hasAvailableModel(
-      modelConfigs.map((modelConfig) => modelConfig.modelId),
+      modelConfigs.map((modelConfig) => modelConfig.modelRunKey),
     );
 
     taskAvailability.set(taskType, hasAvailableModels);

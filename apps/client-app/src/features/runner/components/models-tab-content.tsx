@@ -9,29 +9,30 @@ import { LoadingState } from "@/components/common/loading-state";
 import { Button } from "@/components/ui/button";
 import { TabsContent } from "@/components/ui/tabs";
 import {
-  addModelOption,
-  hasModelOptionsChanges,
-  removeModelOption,
+  addModel,
+  addModelProfile,
+  hasModelsChanges,
+  removeModel,
+  removeModelProfile,
   toFormState,
   toUpdateInput,
-  updateModelOption,
-  validateModelOptionsForm,
+  updateModel,
+  updateModelProfile,
+  validateModelsForm,
   type AiProcessingConfigForm,
 } from "../model/ai-processing-config-form-model";
-import { ModelOptionRow } from "./model-option-row";
+import { ModelRow } from "./model-row";
 import {
   SaveButton,
   SettingsCardFrame,
   SettingsFooter,
 } from "./settings-card-frame";
 
-type ModelOptionsTabContentProps = {
+type ModelsTabContentProps = {
   isRunnerRunning: boolean;
 };
 
-export function ModelOptionsTabContent({
-  isRunnerRunning,
-}: ModelOptionsTabContentProps) {
+export function ModelsTabContent({ isRunnerRunning }: ModelsTabContentProps) {
   const { data, loading, error, refetch } = useQuery(
     AiProcessingConfigDocument,
   );
@@ -51,7 +52,7 @@ export function ModelOptionsTabContent({
   }, [data?.aiProcessingConfig]);
 
   const validationErrors = useMemo(
-    () => (form ? validateModelOptionsForm(form) : []),
+    () => (form ? validateModelsForm(form) : []),
     [form],
   );
   const isSaving = updateState.loading;
@@ -59,7 +60,7 @@ export function ModelOptionsTabContent({
 
   if (loading && !form) {
     return (
-      <TabsContent value="model-options">
+      <TabsContent value="models">
         <LoadingState />
       </TabsContent>
     );
@@ -92,58 +93,72 @@ export function ModelOptionsTabContent({
   };
 
   return (
-    <TabsContent value="model-options">
+    <TabsContent value="models">
       <SettingsCardFrame
-        title="Models"
-        description="Edit the models available to AI processing steps."
+        title="Model Profiles"
+        description="Edit provider models and reusable parameter profiles."
         error={error?.message ?? null}
         saveError={saveError}
         isRunnerRunning={isRunnerRunning}
         validationErrors={hasAttemptedSave ? validationErrors : []}
         footer={<SettingsFooter isSaving={isSaving} />}
-        headerAction={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (form) {
-                setForm(addModelOption(form));
-              }
-            }}
-            disabled={!form || isDisabled}
-          >
-            <Plus />
-            Add model
-          </Button>
-        }
         footerAction={
           <SaveButton
             disabled={
               !form ||
               isDisabled ||
-              !hasModelOptionsChanges(form, data?.aiProcessingConfig)
+              !hasModelsChanges(form, data?.aiProcessingConfig)
             }
             onClick={() => void saveConfig()}
           />
         }
       >
         {form ? (
-          <section className="grid gap-2">
-            {form.modelOptions.map((option, index) => (
-              <ModelOptionRow
-                key={index}
+          <section className="grid gap-4">
+            {form.models.map((model, modelIndex) => (
+              <ModelRow
+                key={modelIndex}
                 disabled={isDisabled}
-                modelOption={option}
-                canRemove={form.modelOptions.length > 1}
-                onChange={(nextOption) => {
-                  setForm(updateModelOption(form, index, nextOption));
+                model={model}
+                canRemove={form.models.length > 1}
+                onChange={(nextModel) => {
+                  setForm(updateModel(form, modelIndex, nextModel));
                 }}
                 onRemove={() => {
-                  setForm(removeModelOption(form, index));
+                  setForm(removeModel(form, modelIndex));
+                }}
+                onAddProfile={() => {
+                  setForm(addModelProfile(form, modelIndex));
+                }}
+                onProfileChange={(profileIndex, nextProfile) => {
+                  setForm(
+                    updateModelProfile(
+                      form,
+                      modelIndex,
+                      profileIndex,
+                      nextProfile,
+                    ),
+                  );
+                }}
+                onProfileRemove={(profileIndex) => {
+                  setForm(removeModelProfile(form, modelIndex, profileIndex));
                 }}
               />
             ))}
+            <div className="flex justify-start pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setForm(addModel(form));
+                }}
+                disabled={isDisabled}
+              >
+                <Plus />
+                Add model
+              </Button>
+            </div>
           </section>
         ) : null}
       </SettingsCardFrame>

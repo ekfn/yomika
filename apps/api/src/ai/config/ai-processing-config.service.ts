@@ -3,26 +3,30 @@ import { loadAppConfig } from "@/config/app-config";
 import { JsonFileService } from "@/library/json-file.service";
 import {
   AI_PROCESSING_OPERATION_VALUES,
-  AI_THINKING_LEVEL_VALUES,
   aiProcessingConfigJsonSchema,
-  type AiModelOptionJson,
+  type AiModelJson,
+  type AiModelProvider,
+  type AiModelProfileJson,
   type AiProcessingConfigJson,
   type AiProcessingOperation,
-  type AiProcessingStepModelConfigJson,
   type AiProcessingStepConfigJson,
-  type AiThinkingLevel,
+  type AiProcessingStepModelConfigJson,
 } from "./ai-processing-config-schemas";
 
 export type AiGenerationModelConfig = {
+  provider: AiModelProvider;
   modelId: string;
-  thinkingMode: AiModelOptionJson["thinkingMode"];
-  thinkingLevel: AiThinkingLevel | null;
+  modelRunKey: string;
+  parameters: AiGenerationModelParameters;
   requestsPerMinute: number;
 };
+
+export type AiGenerationModelParameters = Record<string, unknown>;
 
 const AI_PROCESSING_CONFIG_RELATIVE_PATH = "runtime/ai-processing-config.json";
 const AI_PROCESSING_DEFAULT_CONFIG_RELATIVE_PATH =
   "ai-processing-default-config.json";
+const AI_MODEL_KEY_SEPARATOR = "__";
 
 @Injectable()
 export class AiProcessingConfigService {
@@ -75,23 +79,38 @@ export class AiProcessingConfigService {
   ): Promise<AiGenerationModelConfig[]> {
     const config = await this.getConfig();
     const stepConfig = config.steps[operation];
+    const modelsByKey = getModelsByKey(config.models);
 
-    return stepConfig.models.map((modelConfig) => {
-      const modelOption = config.modelOptions.find(
-        (option) => option.id === modelConfig.modelId,
+    return stepConfig.models.map((stepModelConfig) => {
+      const modelRunKey = getAiModelKey(
+        stepModelConfig.provider,
+        stepModelConfig.modelId,
       );
+      const model = modelsByKey.get(modelRunKey);
 
-      if (!modelOption) {
+      if (!model) {
         throw new Error(
-          `AI processing step ${operation} references unknown model ${modelConfig.modelId}.`,
+          `AI processing step ${operation} references unknown model ${modelRunKey}.`,
+        );
+      }
+
+      const profile = getModelProfile(model, stepModelConfig.profileName);
+
+      if (!profile) {
+        throw new Error(
+          `AI processing step ${operation} references unknown model profile ${modelRunKey}/${stepModelConfig.profileName}.`,
         );
       }
 
       return {
-        modelId: modelOption.id,
-        thinkingMode: modelOption.thinkingMode,
-        thinkingLevel: modelConfig.thinkingLevel,
-        requestsPerMinute: modelOption.requestsPerMinute,
+        provider: model.provider,
+        modelId: model.modelId,
+        modelRunKey,
+        parameters: parseModelParametersJson({
+          label: `AI model profile ${modelRunKey}/${profile.name}`,
+          parametersJson: profile.parametersJson,
+        }),
+        requestsPerMinute: model.requestsPerMinute,
       };
     });
   }
@@ -117,57 +136,106 @@ export class AiProcessingConfigService {
 function normalizeAiProcessingConfig(
   config: AiProcessingConfigJson,
 ): AiProcessingConfigJson {
-  const modelOptions = config.modelOptions.map((option) => ({
-    ...option,
-    id: option.id.trim(),
-  }));
-  const modelOptionsById = new Map<string, AiModelOptionJson>();
-
-  for (const option of modelOptions) {
-    if (modelOptionsById.has(option.id)) {
-      throw new BadRequestException(
-        `Duplicate AI model option id ${option.id}.`,
-      );
-    }
-
-    modelOptionsById.set(option.id, option);
-  }
+  const models = config.models.map(normalizeModel);
+  const modelsByKey = getModelsByKey(models);
 
   return {
-    modelOptions,
+    models,
     steps: Object.fromEntries(
       AI_PROCESSING_OPERATION_VALUES.map((operation) => [
         operation,
-        normalizeStepConfig(
-          operation,
-          config.steps[operation],
-          modelOptionsById,
-        ),
+        normalizeStepConfig(operation, config.steps[operation], modelsByKey),
       ]),
     ) as AiProcessingConfigJson["steps"],
   };
 }
 
+function getModelsByKey(models: AiModelJson[]): Map<string, AiModelJson> {
+  const modelsByKey = new Map<string, AiModelJson>();
+
+  for (const model of models) {
+    const modelKey = getAiModelKey(model.provider, model.modelId);
+
+    if (modelsByKey.has(modelKey)) {
+      throw new BadRequestException(`Duplicate AI model ${modelKey}.`);
+    }
+
+    modelsByKey.set(modelKey, model);
+  }
+
+  return modelsByKey;
+}
+
+function normalizeModel(model: AiModelJson): AiModelJson {
+  const modelId = model.modelId.trim();
+  const modelWithoutProfiles = {
+    ...model,
+    modelId,
+  };
+  const normalizedModel = {
+    ...modelWithoutProfiles,
+    profiles: model.profiles.map((profile) =>
+      normalizeModelProfile(modelWithoutProfiles, profile),
+    ),
+  };
+  const profileNames = new Set<string>();
+  const modelKey = getAiModelKey(
+    normalizedModel.provider,
+    normalizedModel.modelId,
+  );
+
+  for (const profile of normalizedModel.profiles) {
+    if (profileNames.has(profile.name)) {
+      throw new BadRequestException(
+        `AI model ${modelKey} includes duplicate profile ${profile.name}.`,
+      );
+    }
+
+    profileNames.add(profile.name);
+  }
+
+  return normalizedModel;
+}
+
+function normalizeModelProfile(
+  model: AiModelJson,
+  profile: AiModelProfileJson,
+): AiModelProfileJson {
+  const normalizedProfile = {
+    ...profile,
+    name: profile.name.trim(),
+    parametersJson: profile.parametersJson.trim(),
+  };
+
+  parseModelParametersJson({
+    label: `AI model profile ${getAiModelKey(model.provider, model.modelId)}/${normalizedProfile.name}`,
+    parametersJson: normalizedProfile.parametersJson,
+  });
+
+  return normalizedProfile;
+}
+
 function normalizeStepConfig(
   operation: AiProcessingOperation,
   stepConfig: AiProcessingStepConfigJson,
-  modelOptionsById: Map<string, AiModelOptionJson>,
+  modelsByKey: Map<string, AiModelJson>,
 ): AiProcessingStepConfigJson {
-  const modelIds = new Set<string>();
+  const profileKeys = new Set<string>();
   const models = stepConfig.models.map((modelConfig) => {
     const normalizedModelConfig = normalizeStepModelConfig(
       operation,
       modelConfig,
-      modelOptionsById,
+      modelsByKey,
     );
+    const profileKey = getAiProfileKey(normalizedModelConfig);
 
-    if (modelIds.has(normalizedModelConfig.modelId)) {
+    if (profileKeys.has(profileKey)) {
       throw new BadRequestException(
-        `AI processing step ${operation} includes duplicate model ${normalizedModelConfig.modelId}.`,
+        `AI processing step ${operation} includes duplicate model profile ${profileKey}.`,
       );
     }
 
-    modelIds.add(normalizedModelConfig.modelId);
+    profileKeys.add(profileKey);
     return normalizedModelConfig;
   });
 
@@ -177,40 +245,81 @@ function normalizeStepConfig(
 function normalizeStepModelConfig(
   operation: AiProcessingOperation,
   modelConfig: AiProcessingStepModelConfigJson,
-  modelOptionsById: Map<string, AiModelOptionJson>,
+  modelsByKey: Map<string, AiModelJson>,
 ): AiProcessingStepModelConfigJson {
-  const modelId = modelConfig.modelId.trim();
-  const modelOption = modelOptionsById.get(modelId);
-
-  if (!modelOption) {
-    throw new BadRequestException(
-      `AI processing step ${operation} references unknown model ${modelId}.`,
-    );
-  }
-
-  if (modelOption.thinkingMode !== "LEVEL") {
-    return {
-      modelId,
-      thinkingLevel: null,
-    };
-  }
-
-  if (!modelConfig.thinkingLevel) {
-    throw new BadRequestException(
-      `AI processing step ${operation} must select a thinking level for model ${modelOption.id}.`,
-    );
-  }
-
-  if (!AI_THINKING_LEVEL_VALUES.includes(modelConfig.thinkingLevel)) {
-    throw new BadRequestException(
-      `AI processing step ${operation} uses unsupported thinking level ${modelConfig.thinkingLevel}.`,
-    );
-  }
-
-  return {
-    modelId,
-    thinkingLevel: modelConfig.thinkingLevel,
+  const normalizedModelConfig = {
+    ...modelConfig,
+    modelId: modelConfig.modelId.trim(),
+    profileName: modelConfig.profileName.trim(),
   };
+  const modelKey = getAiModelKey(
+    normalizedModelConfig.provider,
+    normalizedModelConfig.modelId,
+  );
+  const model = modelsByKey.get(modelKey);
+
+  if (!model) {
+    throw new BadRequestException(
+      `AI processing step ${operation} references unknown model ${modelKey}.`,
+    );
+  }
+
+  if (!getModelProfile(model, normalizedModelConfig.profileName)) {
+    throw new BadRequestException(
+      `AI processing step ${operation} references unknown model profile ${modelKey}/${normalizedModelConfig.profileName}.`,
+    );
+  }
+
+  return normalizedModelConfig;
+}
+
+function getModelProfile(
+  model: AiModelJson,
+  profileName: string,
+): AiModelProfileJson | undefined {
+  return model.profiles.find((profile) => profile.name === profileName);
+}
+
+function getAiModelKey(provider: AiModelProvider, modelId: string): string {
+  return `${provider}${AI_MODEL_KEY_SEPARATOR}${modelId}`;
+}
+
+function getAiProfileKey(modelConfig: AiProcessingStepModelConfigJson): string {
+  return `${getAiModelKey(
+    modelConfig.provider,
+    modelConfig.modelId,
+  )}${AI_MODEL_KEY_SEPARATOR}${modelConfig.profileName}`;
+}
+
+function parseModelParametersJson(input: {
+  label: string;
+  parametersJson: string;
+}): AiGenerationModelParameters {
+  const parametersJson = input.parametersJson.trim();
+  return parametersJson ? parseJsonObject(input) : {};
+}
+
+function parseJsonObject(input: {
+  label: string;
+  parametersJson: string;
+}): Record<string, unknown> {
+  let value: unknown;
+
+  try {
+    value = JSON.parse(input.parametersJson);
+  } catch {
+    throw new BadRequestException(
+      `${input.label} parametersJson must be valid JSON.`,
+    );
+  }
+
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new BadRequestException(
+      `${input.label} parametersJson must be a JSON object.`,
+    );
+  }
+
+  return value as Record<string, unknown>;
 }
 
 function isFileNotFoundError(error: unknown): boolean {

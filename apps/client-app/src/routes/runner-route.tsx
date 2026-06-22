@@ -10,7 +10,7 @@ import {
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingState } from "@/components/common/loading-state";
 import { AiProcessingSettingsTabContent } from "@/features/runner/components/ai-processing-settings-tab-content";
-import { ModelOptionsTabContent } from "@/features/runner/components/model-options-tab-content";
+import { ModelsTabContent } from "@/features/runner/components/models-tab-content";
 import { RunnerOperationLogTabContent } from "@/features/runner/components/runner-operation-log-tab-content";
 import { RunnerStatusTabContent } from "@/features/runner/components/runner-status-tab-content";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ const RUNNER_TAB_SEARCH_PARAM = "tab";
 const RUNNER_TAB_VALUES = [
   "status",
   "ai-processing",
-  "model-options",
+  "models",
   "logs",
 ] as const;
 const DEFAULT_RUNNER_TAB_VALUE = "status";
@@ -30,7 +30,7 @@ type RunnerTab = (typeof RUNNER_TAB_VALUES)[number];
 const RUNNER_TAB_LABELS = {
   status: "Status",
   "ai-processing": "AI Processing Settings",
-  "model-options": "Models",
+  models: "Models",
   logs: "Logs",
 } satisfies Record<RunnerTab, string>;
 
@@ -155,8 +155,8 @@ export function RunnerRoute() {
           <AiProcessingSettingsTabContent isRunnerRunning={isRunning} />
         ) : null}
 
-        {activeTab === "model-options" ? (
-          <ModelOptionsTabContent isRunnerRunning={isRunning} />
+        {activeTab === "models" ? (
+          <ModelsTabContent isRunnerRunning={isRunning} />
         ) : null}
 
         {activeTab === "logs" ? <RunnerOperationLogTabContent /> : null}

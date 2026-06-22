@@ -44,6 +44,8 @@ export class RunnerService {
   }
 
   async start(): Promise<RunnerStatus> {
+    await new Promise((res) => setTimeout(res, 200));
+
     if (this.runnerState.isRunning()) {
       return this.getStatus();
     }

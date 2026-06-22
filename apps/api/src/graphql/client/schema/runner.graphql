@@ -12,15 +12,9 @@ enum AiProcessingStep {
   VOCABULARY
 }
 
-enum AiThinkingMode {
-  BUDGET
-  LEVEL
-}
-
-enum AiThinkingLevel {
-  LOW
-  MEDIUM
-  HIGH
+enum AiModelProvider {
+  GEMINI
+  GITHUB_MODELS
 }
 
 type RunnerTask {
@@ -72,10 +66,16 @@ type RunnerOperationLogEntry {
   result: RunnerOperationLogResult
 }
 
-type AiModelOption {
-  id: ID!
-  thinkingMode: AiThinkingMode!
+type AiModel {
+  provider: AiModelProvider!
+  modelId: String!
   requestsPerMinute: Int!
+  profiles: [AiModelProfile!]!
+}
+
+type AiModelProfile {
+  name: String!
+  parametersJson: String!
 }
 
 type AiProcessingStepConfig {
@@ -84,19 +84,26 @@ type AiProcessingStepConfig {
 }
 
 type AiProcessingStepModelConfig {
+  provider: AiModelProvider!
   modelId: String!
-  thinkingLevel: AiThinkingLevel
+  profileName: String!
 }
 
 type AiProcessingConfig {
-  modelOptions: [AiModelOption!]!
+  models: [AiModel!]!
   steps: [AiProcessingStepConfig!]!
 }
 
-input AiModelOptionInput {
-  id: ID!
-  thinkingMode: AiThinkingMode!
+input AiModelInput {
+  provider: AiModelProvider!
+  modelId: String!
   requestsPerMinute: Int!
+  profiles: [AiModelProfileInput!]!
+}
+
+input AiModelProfileInput {
+  name: String!
+  parametersJson: String!
 }
 
 input AiProcessingStepConfigInput {
@@ -105,12 +112,13 @@ input AiProcessingStepConfigInput {
 }
 
 input AiProcessingStepModelConfigInput {
+  provider: AiModelProvider!
   modelId: String!
-  thinkingLevel: AiThinkingLevel
+  profileName: String!
 }
 
 input UpdateAiProcessingConfigInput {
-  modelOptions: [AiModelOptionInput!]!
+  models: [AiModelInput!]!
   steps: [AiProcessingStepConfigInput!]!
 }
 

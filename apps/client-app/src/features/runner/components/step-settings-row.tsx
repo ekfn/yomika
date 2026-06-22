@@ -1,10 +1,5 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import {
-  AiThinkingMode,
-  type AiProcessingStep,
-  type AiThinkingLevel,
-} from "@/graphql/generated/graphql";
-import { Badge } from "@/components/ui/badge";
+import { type AiProcessingStep } from "@/graphql/generated/graphql";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -16,16 +11,14 @@ import {
 } from "@/components/ui/select";
 import {
   addStepModelConfig,
+  getModelProfileOptions,
+  getProfileKey,
   moveStepModelConfig,
-  normalizeStepModelForModel,
+  PROVIDER_LABELS,
   removeStepModelConfig,
   STEP_LABELS,
-  THINKING_LEVEL_LABELS,
-  THINKING_LEVEL_ORDER,
-  THINKING_MODE_LABELS,
   updateStepModelConfig,
   type AiProcessingConfigForm,
-  type ModelOptionForm,
   type StepConfigForm,
   type StepModelConfigForm,
 } from "../model/ai-processing-config-form-model";
@@ -44,22 +37,8 @@ export function StepSettingsRow({
   const stepConfig = form.steps[step];
 
   return (
-    <div className="grid gap-3 rounded-lg border bg-background p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="font-medium">{STEP_LABELS[step]}</div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          onClick={() => {
-            onChange(addStepModelConfig(stepConfig, form));
-          }}
-        >
-          <Plus />
-          Add model
-        </Button>
-      </div>
+    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3">
+      <div className="font-medium">{STEP_LABELS[step]}</div>
 
       <div className="grid gap-2">
         {stepConfig.models.map((modelConfig, index) => (
@@ -88,6 +67,21 @@ export function StepSettingsRow({
             }}
           />
         ))}
+
+        <div className="flex justify-start pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            onClick={() => {
+              onChange(addStepModelConfig(stepConfig, form));
+            }}
+          >
+            <Plus />
+            Add model
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -118,34 +112,32 @@ function StepModelConfigRow({
   onMoveUp: () => void;
   onRemove: () => void;
 }) {
-  const modelOption = form.modelOptions.find(
-    (option) => option.id === modelConfig.modelId,
-  );
+  const profileOptions = getModelProfileOptions(form);
 
   return (
-    <div className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-[72px_minmax(0,1fr)_180px_auto] md:items-center">
+    <div className="grid gap-3 rounded-md border bg-background p-3 md:grid-cols-[48px_minmax(0,1fr)_auto_auto] md:items-center">
       <div className="text-sm font-medium text-muted-foreground">
         #{index + 1}
       </div>
 
       <Field>
-        <FieldLabel className="sr-only">Model</FieldLabel>
+        <FieldLabel className="sr-only">Model profile</FieldLabel>
         <Select
-          value={modelConfig.modelId}
-          onValueChange={(modelId) => {
-            const nextModelOption = form.modelOptions.find(
-              (option) => option.id === modelId,
+          value={getProfileKey(modelConfig)}
+          onValueChange={(profileKey) => {
+            const nextProfileOption = profileOptions.find(
+              (option) => option.key === profileKey,
             );
 
-            onChange(
-              normalizeStepModelForModel(
-                {
-                  ...modelConfig,
-                  modelId,
-                },
-                nextModelOption,
-              ),
-            );
+            if (!nextProfileOption) {
+              return;
+            }
+
+            onChange({
+              provider: nextProfileOption.provider,
+              modelId: nextProfileOption.modelId,
+              profileName: nextProfileOption.profileName,
+            });
           }}
           disabled={disabled}
         >
@@ -153,28 +145,15 @@ function StepModelConfigRow({
             <SelectValue placeholder="Select model" />
           </SelectTrigger>
           <SelectContent>
-            {form.modelOptions
-              .filter((option) => option.id.trim().length > 0)
-              .map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.id}
-                </SelectItem>
-              ))}
+            {profileOptions.map((option) => (
+              <SelectItem key={option.key} value={option.key}>
+                {option.modelId} ({PROVIDER_LABELS[option.provider]}) -{" "}
+                {option.profileName}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </Field>
-
-      <ThinkingControl
-        disabled={disabled}
-        modelOption={modelOption}
-        value={modelConfig.thinkingLevel}
-        onChange={(thinkingLevel) => {
-          onChange({
-            ...modelConfig,
-            thinkingLevel,
-          });
-        }}
-      />
 
       <div className="flex items-center gap-1">
         <Button
@@ -209,53 +188,5 @@ function StepModelConfigRow({
         </Button>
       </div>
     </div>
-  );
-}
-
-function ThinkingControl({
-  disabled,
-  modelOption,
-  value,
-  onChange,
-}: {
-  disabled: boolean;
-  modelOption: ModelOptionForm | undefined;
-  value: AiThinkingLevel | null;
-  onChange: (thinkingLevel: AiThinkingLevel | null) => void;
-}) {
-  if (!modelOption) {
-    return <Badge variant="destructive">Missing model</Badge>;
-  }
-
-  if (modelOption.thinkingMode !== AiThinkingMode.Level) {
-    return (
-      <Badge variant="secondary">
-        {THINKING_MODE_LABELS[modelOption.thinkingMode]}
-      </Badge>
-    );
-  }
-
-  return (
-    <Field>
-      <FieldLabel className="sr-only">Thinking level</FieldLabel>
-      <Select
-        value={value ?? ""}
-        onValueChange={(nextValue) => {
-          onChange(nextValue as AiThinkingLevel);
-        }}
-        disabled={disabled}
-      >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Level" />
-        </SelectTrigger>
-        <SelectContent>
-          {THINKING_LEVEL_ORDER.map((level) => (
-            <SelectItem key={level} value={level}>
-              {THINKING_LEVEL_LABELS[level]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </Field>
   );
 }

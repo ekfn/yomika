@@ -3,38 +3,61 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { AuthGuard } from "@/auth/auth.guard";
 import {
   AI_PROCESSING_OPERATION_VALUES,
-  type AiModelOptionJson,
+  type AiModelProvider,
   type AiProcessingConfigJson,
   type AiProcessingOperation,
   type AiProcessingStepModelConfigJson,
   type AiProcessingStepConfigJson,
-  type AiThinkingLevel,
-  type AiThinkingMode,
 } from "./ai-processing-config-schemas";
 import { AiProcessingConfigService } from "./ai-processing-config.service";
 
 type AiProcessingStepValue = "CLEANUP" | "SPLIT" | "TRANSLATION" | "VOCABULARY";
+type AiModelProviderValue = "GEMINI" | "GITHUB_MODELS";
 
-type AiModelOptionOutput = AiModelOptionJson;
+type AiModelProfileOutput = {
+  name: string;
+  parametersJson: string;
+};
 
-type AiProcessingStepConfigOutput = AiProcessingStepConfigJson & {
+type AiModelOutput = {
+  provider: AiModelProviderValue;
+  modelId: string;
+  requestsPerMinute: number;
+  profiles: AiModelProfileOutput[];
+};
+
+type AiProcessingStepModelConfigOutput = {
+  provider: AiModelProviderValue;
+  modelId: string;
+  profileName: string;
+};
+
+type AiProcessingStepConfigOutput = {
   step: AiProcessingStepValue;
+  models: AiProcessingStepModelConfigOutput[];
 };
 
 type AiProcessingConfigOutput = {
-  modelOptions: AiModelOptionOutput[];
+  models: AiModelOutput[];
   steps: AiProcessingStepConfigOutput[];
 };
 
-type AiModelOptionInput = {
-  id: string;
-  thinkingMode: AiThinkingMode;
+type AiModelProfileInput = {
+  name: string;
+  parametersJson: string;
+};
+
+type AiModelInput = {
+  provider: AiModelProviderValue;
+  modelId: string;
   requestsPerMinute: number;
+  profiles: AiModelProfileInput[];
 };
 
 type AiProcessingStepModelConfigInput = {
+  provider: AiModelProviderValue;
   modelId: string;
-  thinkingLevel?: AiThinkingLevel | null;
+  profileName: string;
 };
 
 type AiProcessingStepConfigInput = {
@@ -43,7 +66,7 @@ type AiProcessingStepConfigInput = {
 };
 
 type UpdateAiProcessingConfigInput = {
-  modelOptions: AiModelOptionInput[];
+  models: AiModelInput[];
   steps: AiProcessingStepConfigInput[];
 };
 
@@ -60,6 +83,16 @@ const OPERATION_BY_GRAPHQL_STEP = {
   TRANSLATION: "translation",
   VOCABULARY: "vocabulary",
 } satisfies Record<AiProcessingStepValue, AiProcessingOperation>;
+
+const GRAPHQL_PROVIDER_BY_MODEL_PROVIDER = {
+  gemini: "GEMINI",
+  "github-models": "GITHUB_MODELS",
+} satisfies Record<AiModelProvider, AiModelProviderValue>;
+
+const MODEL_PROVIDER_BY_GRAPHQL_PROVIDER = {
+  GEMINI: "gemini",
+  GITHUB_MODELS: "github-models",
+} satisfies Record<AiModelProviderValue, AiModelProvider>;
 
 @Resolver()
 @UseGuards(AuthGuard)
@@ -91,10 +124,19 @@ function toAiProcessingConfigOutput(
   config: AiProcessingConfigJson,
 ): AiProcessingConfigOutput {
   return {
-    modelOptions: config.modelOptions,
+    models: config.models.map((model) => ({
+      provider: GRAPHQL_PROVIDER_BY_MODEL_PROVIDER[model.provider],
+      modelId: model.modelId,
+      requestsPerMinute: model.requestsPerMinute,
+      profiles: model.profiles,
+    })),
     steps: AI_PROCESSING_OPERATION_VALUES.map((operation) => ({
       step: GRAPHQL_STEP_BY_OPERATION[operation],
-      ...config.steps[operation],
+      models: config.steps[operation].models.map((model) => ({
+        provider: GRAPHQL_PROVIDER_BY_MODEL_PROVIDER[model.provider],
+        modelId: model.modelId,
+        profileName: model.profileName,
+      })),
     })),
   };
 }
@@ -103,10 +145,11 @@ function toAiProcessingConfigJson(
   input: UpdateAiProcessingConfigInput,
 ): AiProcessingConfigJson {
   return {
-    modelOptions: input.modelOptions.map((option) => ({
-      id: option.id,
-      thinkingMode: option.thinkingMode,
-      requestsPerMinute: option.requestsPerMinute,
+    models: input.models.map((model) => ({
+      provider: MODEL_PROVIDER_BY_GRAPHQL_PROVIDER[model.provider],
+      modelId: model.modelId,
+      requestsPerMinute: model.requestsPerMinute,
+      profiles: model.profiles,
     })),
     steps: toStepConfigJson(input.steps),
   };
@@ -153,7 +196,8 @@ function toStepModelConfigsJson(
   models: AiProcessingStepModelConfigInput[],
 ): AiProcessingStepModelConfigJson[] {
   return models.map((model) => ({
+    provider: MODEL_PROVIDER_BY_GRAPHQL_PROVIDER[model.provider],
     modelId: model.modelId,
-    thinkingLevel: model.thinkingLevel ?? null,
+    profileName: model.profileName,
   }));
 }

@@ -1,78 +1,49 @@
 import { Injectable } from "@nestjs/common";
 import { GoogleGenAI } from "@google/genai";
-import {
-  AiProcessingConfigService,
-  type AiGenerationModelConfig,
-} from "@/ai/config/ai-processing-config.service";
+import type { GenerateContentConfig } from "@google/genai";
+import type { AiGenerationModelConfig } from "@/ai/config/ai-processing-config.service";
 import { loadAppConfig } from "@/config/app-config";
-import { AiModelRunStateService } from "./ai-model-run-state.service";
-import { AiOperationModelsExhaustedError } from "./ai-operation-models-exhausted.error";
-import { AiRequestLogContextService } from "./ai-request-log-context.service";
+import { AiProviderRateLimitError } from "./ai-provider-rate-limit.error";
 import type {
-  AiJsonGenerationClient,
   AiJsonGenerationInput,
+  AiProviderJsonGenerationClient,
 } from "./ai-json-generation-client";
-import { buildGeminiGenerateContentConfig } from "./gemini-model.constants";
 
 @Injectable()
-export class GeminiJsonGenerationClient implements AiJsonGenerationClient {
+export class GeminiJsonGenerationClient implements AiProviderJsonGenerationClient {
   private readonly config = loadAppConfig();
-  private readonly ai = new GoogleGenAI({ apiKey: this.config.geminiApiKey });
 
-  constructor(
-    private readonly aiProcessingConfigService: AiProcessingConfigService,
-    private readonly aiModelRunState: AiModelRunStateService,
-    private readonly aiRequestLogContext: AiRequestLogContextService,
-  ) {}
-
-  async generateJson(input: AiJsonGenerationInput): Promise<unknown> {
-    const modelConfigs =
-      await this.aiProcessingConfigService.getGenerationModelConfigs(
-        input.operation,
-      );
-
-    for (const modelConfig of modelConfigs) {
-      if (this.aiModelRunState.isModelExhausted(modelConfig.modelId)) {
-        continue;
-      }
-
-      await this.aiModelRunState.waitForRequestSlot(
-        modelConfig.modelId,
-        modelConfig.requestsPerMinute,
-      );
-
-      try {
-        return await this.generateJsonWithModel(input, modelConfig);
-      } catch (error) {
-        if (!isGeminiRateLimitError(error)) {
-          throw error;
-        }
-
-        this.aiModelRunState.markModelExhausted(modelConfig.modelId);
-      }
-    }
-
-    throw new AiOperationModelsExhaustedError({
-      operation: input.operation,
-      operationName: input.operationName,
-      modelIds: modelConfigs.map((modelConfig) => modelConfig.modelId),
-    });
-  }
-
-  private async generateJsonWithModel(
+  async generateJson(
     input: AiJsonGenerationInput,
     modelConfig: AiGenerationModelConfig,
   ): Promise<unknown> {
-    await this.aiRequestLogContext.recordAiRequest(modelConfig.modelId);
+    if (!this.config.geminiApiKey) {
+      throw new Error(`Gemini ${input.operationName} requires GEMINI_API_KEY.`);
+    }
 
-    const response = await this.ai.models.generateContent({
-      model: modelConfig.modelId,
-      contents: input.prompt,
-      config: buildGeminiGenerateContentConfig(modelConfig, {
-        responseMimeType: "application/json",
-        responseJsonSchema: input.responseJsonSchema,
-      }),
-    });
+    const ai = new GoogleGenAI({ apiKey: this.config.geminiApiKey });
+    let response;
+
+    try {
+      response = await ai.models.generateContent({
+        model: modelConfig.modelId,
+        contents: input.prompt,
+        config: {
+          ...(modelConfig.parameters as Partial<GenerateContentConfig>),
+          responseMimeType: "application/json",
+          responseJsonSchema: input.responseJsonSchema,
+        },
+      });
+    } catch (error) {
+      if (isGeminiRateLimitError(error)) {
+        throw new AiProviderRateLimitError(
+          `Gemini ${input.operationName} was rate limited for ${modelConfig.modelId}.`,
+        );
+      }
+
+      throw error;
+    }
+
     const text = response.text;
 
     if (!text) {

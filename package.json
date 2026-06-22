@@ -10,8 +10,9 @@
   "scripts": {
     "prepare": "husky",
     "ocr:setup": "dotenv -e .env -- node scripts/ocr-setup.mjs",
+    "ocr:start": "dotenv -e .env -- node scripts/ocr-start.mjs",
     "build": "pnpm --filter @yomika/shared build && pnpm --filter @yomika/api build && pnpm --filter @yomika/client-app build",
-    "start": "concurrently -k -n ocr,app \"dotenv -e .env -- node scripts/ocr-start.mjs\" \"pnpm start:no-ocr\"",
+    "start": "concurrently -k -n ocr,app \"pnpm ocr:start\" \"pnpm start:no-ocr\"",
     "start:no-ocr": "dotenv -e .env -v NODE_ENV=production -- node apps/api/dist/main.js",
     "dev:api": "dotenv -e .env -- pnpm --filter @yomika/api dev",
     "dev:client-app": "pnpm --filter @yomika/client-app dev",

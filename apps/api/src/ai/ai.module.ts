@@ -8,7 +8,9 @@ import { AiProcessingConfigService } from "./config/ai-processing-config.service
 import { AiModelRunStateService } from "./generation/ai-model-run-state.service";
 import { AiRequestLogContextService } from "./generation/ai-request-log-context.service";
 import { AI_JSON_GENERATION_CLIENT } from "./generation/ai-json-generation-client";
+import { AiJsonGenerationRouter } from "./generation/ai-json-generation-router";
 import { GeminiJsonGenerationClient } from "./generation/gemini-json-generation-client";
+import { GithubModelsJsonGenerationClient } from "./generation/github-models-json-generation-client";
 import { CleanupAiService } from "./processes/cleanup/cleanup-ai.service";
 import { SplitAiService } from "./processes/split/split-ai.service";
 import { TranslationAiService } from "./processes/translation/translation-ai.service";
@@ -22,14 +24,16 @@ import { VocabularyAiService } from "./processes/vocabulary/vocabulary-ai.servic
     AiProcessingService,
     AiModelRunStateService,
     AiRequestLogContextService,
+    AiJsonGenerationRouter,
     CleanupAiService,
     GeminiJsonGenerationClient,
+    GithubModelsJsonGenerationClient,
     SplitAiService,
     TranslationAiService,
     VocabularyAiService,
     {
       provide: AI_JSON_GENERATION_CLIENT,
-      useExisting: GeminiJsonGenerationClient,
+      useExisting: AiJsonGenerationRouter,
     },
     {
       provide: AI_PROCESSING_CLIENT,

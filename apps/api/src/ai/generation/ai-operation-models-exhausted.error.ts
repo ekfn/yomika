@@ -11,7 +11,7 @@ export class AiOperationModelsExhaustedError extends Error {
     modelIds: string[];
   }) {
     super(
-      `Gemini ${input.operationName} could not run because every configured model returned 429 in this runner run: ${input.modelIds.join(", ")}.`,
+      `AI ${input.operationName} could not run because every configured model returned 429 in this runner run: ${input.modelIds.join(", ")}.`,
     );
     this.name = "AiOperationModelsExhaustedError";
     this.operation = input.operation;

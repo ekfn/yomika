@@ -91,7 +91,7 @@ export function AiProcessingSettingsTabContent({
     <TabsContent value="ai-processing">
       <SettingsCardFrame
         title="AI Processing Settings"
-        description="Select the model and thinking configuration used by each AI step."
+        description="Select the ordered model profiles used by each AI step."
         error={error?.message ?? null}
         saveError={saveError}
         isRunnerRunning={isRunnerRunning}
@@ -110,7 +110,7 @@ export function AiProcessingSettingsTabContent({
       >
         {form ? (
           <section className="grid gap-3">
-            <div className="grid gap-2">
+            <div className="grid gap-4">
               {STEP_ORDER.map((step) => (
                 <StepSettingsRow
                   key={step}
