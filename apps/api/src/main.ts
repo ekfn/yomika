@@ -19,7 +19,7 @@ async function bootstrap() {
 
   if (!isProduction) {
     app.enableCors({
-      origin: `http://localhost:${config.clientAppPort}`,
+      origin: `http://127.0.0.1:${config.clientAppPort}`,
       credentials: true,
     });
   }

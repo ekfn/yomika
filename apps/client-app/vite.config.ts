@@ -13,7 +13,8 @@ const envSchema = z.object({
 
 export default defineConfig(({ mode }) => {
   const env = envSchema.parse(loadEnv(mode, repoRoot, ""));
-  const apiTarget = `http://localhost:${env.API_PORT}`;
+  const localHost = "127.0.0.1";
+  const apiTarget = `http://${localHost}:${env.API_PORT}`;
 
   return {
     envDir: repoRoot,
@@ -27,6 +28,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: localHost,
       port: env.CLIENT_APP_PORT,
       proxy: {
         "/api/graphql": {

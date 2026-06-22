@@ -10,7 +10,7 @@ from paddleocr import PaddleOCR, PaddleOCRVL
 app = FastAPI()
 request_semaphore = asyncio.Semaphore(1)
 
-OCR_CPU_THREADS = 16
+OCR_CPU_THREADS = 8
 OCR_MKLDNN_CACHE_CAPACITY = 32
 OCR_DEVICE = os.getenv("YOMIKA_OCR_DEVICE", "cpu").strip().lower()
 OCR_PROFILE = os.getenv("YOMIKA_OCR_PROFILE", "full").strip().lower()
