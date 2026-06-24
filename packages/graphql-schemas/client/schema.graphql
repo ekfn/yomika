@@ -187,30 +187,16 @@ type Mutation {
   moveFolder(input: MoveFolderInput!, path: String!): Folder!
   movePage(input: MovePageInput!, path: String!): Page!
   noop: Boolean!
-  overwritePageSourceImage(
-    input: OverwritePageSourceImageInput!
-    path: String!
-  ): Page!
+  overwritePageSourceImage(input: OverwritePageSourceImageInput!, path: String!): Page!
   requestRunnerStop: RunnerStatus!
   startRunner: RunnerStatus!
-  updateAiProcessingConfig(
-    input: UpdateAiProcessingConfigInput!
-  ): AiProcessingConfig!
+  updateAiProcessingConfig(input: UpdateAiProcessingConfigInput!): AiProcessingConfig!
   updateBook(input: UpdateBookInput!, path: String!): Book!
   updateFolder(input: UpdateFolderInput!, path: String!): Folder!
   updatePage(input: UpdatePageInput!, path: String!): Page!
-  updatePageSegmentSourceText(
-    input: UpdatePageSegmentSourceTextInput!
-    path: String!
-  ): Page!
-  updatePageSegmentTextWithReading(
-    input: UpdatePageSegmentTextWithReadingInput!
-    path: String!
-  ): Page!
-  updatePageSegmentTranslation(
-    input: UpdatePageSegmentTranslationInput!
-    path: String!
-  ): Page!
+  updatePageSegmentSourceText(input: UpdatePageSegmentSourceTextInput!, path: String!): Page!
+  updatePageSegmentTextWithReading(input: UpdatePageSegmentTextWithReadingInput!, path: String!): Page!
+  updatePageSegmentTranslation(input: UpdatePageSegmentTranslationInput!, path: String!): Page!
 }
 
 type OcrBlock {
@@ -293,9 +279,7 @@ type Query {
   folders(parentPath: String): [Folder!]!
   health: String!
   libraryFolderContents(parentPath: String): LibraryFolderContents!
-  libraryFolderContentsBatch(
-    input: [LibraryFolderContentsInput!]!
-  ): [LibraryFolderContents!]!
+  libraryFolderContentsBatch(input: [LibraryFolderContentsInput!]!): [LibraryFolderContents!]!
   librarySettingsDefaults: LibrarySettingsDefaults!
   page(path: String!): Page!
   pages(parentPath: String): [Page!]!

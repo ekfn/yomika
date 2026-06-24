@@ -105,6 +105,7 @@ pnpm ocr:setup
 Build the app:
 
 ```bash
+pnpm codegen
 pnpm build
 ```
 
@@ -180,6 +181,7 @@ pnpm install
 Rebuild:
 
 ```bash
+pnpm codegen
 pnpm build
 ```
 
