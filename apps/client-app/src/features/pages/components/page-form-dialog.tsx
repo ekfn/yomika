@@ -1,10 +1,8 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "@apollo/client/react";
-import { ImagePlus, Pencil } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import {
   formatUploadFileSize,
-  getContainingFolderPath,
-  getPageDisplayName,
   UPLOAD_ALLOWED_IMAGE_MIME_TYPES,
   UPLOAD_MAX_FILE_SIZE_BYTES,
 } from "@yomika/shared";
@@ -15,11 +13,9 @@ import {
   CreatePageDocument,
   LibrarySettingsDefaultsDocument,
   StartRunnerDocument,
-  UpdatePageDocument,
 } from "@/graphql/generated/graphql";
 import {
   FolderLocationStrip,
-  getFolderLocationLabel,
   ROOT_FOLDER_LABEL,
 } from "@/features/library/components/folder-location-info";
 import { AiProcessingFeatureField } from "@/features/processing-settings/components/ai-processing-feature-field";
@@ -55,7 +51,6 @@ import { TextField } from "@/components/ui/text-field";
 import { getNameFromFileName } from "@/lib/file-name";
 
 type PageFormDialogProps = {
-  page?: PageFormDialogPage;
   defaultParentPath?: string | null;
   defaultParentLabel?: string | null;
   open?: boolean;
@@ -64,7 +59,7 @@ type PageFormDialogProps = {
   onCompleted?: (path?: string) => Promise<void> | void;
 };
 
-type PageFormDialogPage = Pick<
+export type PageFormDialogPage = Pick<
   NonNullable<PageQuery["page"]> | PageListFieldsFragment,
   "path" | "bookPath" | "settings" | "effectiveSettings"
 >;
@@ -72,12 +67,14 @@ type PageFormDialogPage = Pick<
 type PageFormErrors = {
   sourceUploadId?: string | undefined;
   name?: string | undefined;
+} & PageSettingsFieldErrors;
+
+export type PageSettingsFieldErrors = {
   sourceLanguages?: string | undefined;
   targetLanguage?: string | undefined;
 };
 
 type PageFormContentProps = {
-  page: PageFormDialogPage | undefined;
   defaultParentPath: string | null | undefined;
   defaultParentLabel: string | null | undefined;
   onClose: () => void;
@@ -87,7 +84,7 @@ type PageFormContentProps = {
 const INHERIT_SETTINGS_VALUE = "inherit";
 const CUSTOM_SETTINGS_VALUE = "custom";
 
-function getInitialSourceLanguages(
+export function getInitialPageSourceLanguages(
   page: PageFormDialogPage | undefined,
 ): string | null {
   if (!page) {
@@ -103,7 +100,7 @@ function getInitialSourceLanguages(
     : page.settings.translationSourceLanguages.join(", ");
 }
 
-function getInitialTargetLanguage(
+export function getInitialPageTargetLanguage(
   page: PageFormDialogPage | undefined,
 ): string | null {
   if (!page) {
@@ -117,7 +114,7 @@ function getInitialTargetLanguage(
   return page.settings.translationTargetLanguage;
 }
 
-function getInitialVocabularyEnabled(
+export function getInitialPageVocabularyEnabled(
   page: PageFormDialogPage | undefined,
 ): boolean | null {
   if (!page) {
@@ -131,7 +128,7 @@ function getInitialVocabularyEnabled(
   return page.settings.vocabularyEnabled;
 }
 
-function getInitialAiProcessingEnabled(
+export function getInitialPageAiProcessingEnabled(
   page: PageFormDialogPage | undefined,
 ): boolean | null {
   if (!page) {
@@ -162,7 +159,6 @@ function validatePageImage(file: File): string | null {
 }
 
 export function PageFormDialog({
-  page,
   defaultParentPath,
   defaultParentLabel,
   open: controlledOpen,
@@ -170,7 +166,6 @@ export function PageFormDialog({
   onOpenChange,
   onCompleted,
 }: PageFormDialogProps) {
-  const isEditing = Boolean(page);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
 
@@ -184,9 +179,9 @@ export function PageFormDialog({
       {trigger !== null ? (
         <DialogTrigger asChild>
           {trigger ?? (
-            <Button variant={isEditing ? "outline" : "default"}>
-              {isEditing ? <Pencil /> : <ImagePlus />}
-              {isEditing ? "Edit Page" : "New Page"}
+            <Button variant="default">
+              <ImagePlus />
+              New Page
             </Button>
           )}
         </DialogTrigger>
@@ -194,7 +189,6 @@ export function PageFormDialog({
       <DialogContent className="sm:max-w-lg">
         {open ? (
           <PageFormContent
-            page={page}
             defaultParentPath={defaultParentPath}
             defaultParentLabel={defaultParentLabel}
             onClose={() => handleOpenChange(false)}
@@ -207,30 +201,21 @@ export function PageFormDialog({
 }
 
 function PageFormContent({
-  page,
   defaultParentPath,
   defaultParentLabel,
   onClose,
   onCompleted,
 }: PageFormContentProps) {
-  const isEditing = Boolean(page);
-  const isBookPage = Boolean(page?.bookPath);
-  const canShowFolderLocation = !page?.bookPath;
-  const [name, setName] = useState(page ? getPageDisplayName(page.path) : "");
-  const [sourceLanguages, setSourceLanguages] = useState<string | null>(
-    getInitialSourceLanguages(page),
-  );
-  const [targetLanguage, setTargetLanguage] = useState<string | null>(
-    getInitialTargetLanguage(page),
-  );
+  const [name, setName] = useState("");
+  const [sourceLanguages, setSourceLanguages] = useState<string | null>("");
+  const [targetLanguage, setTargetLanguage] = useState<string | null>("");
   const [aiProcessingEnabled, setAiProcessingEnabled] = useState<
     boolean | null
-  >(getInitialAiProcessingEnabled(page));
+  >(true);
   const [vocabularyEnabled, setVocabularyEnabled] = useState<boolean | null>(
-    getInitialVocabularyEnabled(page),
+    false,
   );
-  const [settingsDefaultsApplied, setSettingsDefaultsApplied] =
-    useState(isEditing);
+  const [settingsDefaultsApplied, setSettingsDefaultsApplied] = useState(false);
   const [sourceUploadId, setSourceUploadId] = useState<string | null>(null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [isImageUploading, setIsImageUploading] = useState(false);
@@ -238,30 +223,15 @@ function PageFormContent({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createPage, createState] = useMutation(CreatePageDocument);
   const [startRunner] = useMutation(StartRunnerDocument);
-  const [updatePage, updateState] = useMutation(UpdatePageDocument);
-  const defaultsQuery = useQuery(LibrarySettingsDefaultsDocument, {
-    skip: isEditing,
-  });
-  const saving = createState.loading || updateState.loading;
-  const settingsDefaultsErrorMessage =
-    !isEditing && defaultsQuery.error ? defaultsQuery.error.message : null;
-  const parentPath = page
-    ? getContainingFolderPath(page.path)
-    : (defaultParentPath ?? null);
-  const parentLabel = page
-    ? getFolderLocationLabel(parentPath)
-    : (defaultParentLabel ?? ROOT_FOLDER_LABEL);
-  const sourceLanguagesCustomFallback =
-    page?.effectiveSettings.translationSourceLanguages.join(", ") ?? "";
-  const targetLanguageCustomFallback =
-    page?.effectiveSettings.translationTargetLanguage ?? "";
+  const defaultsQuery = useQuery(LibrarySettingsDefaultsDocument);
+  const saving = createState.loading;
+  const settingsDefaultsErrorMessage = defaultsQuery.error
+    ? defaultsQuery.error.message
+    : null;
+  const parentPath = defaultParentPath ?? null;
+  const parentLabel = defaultParentLabel ?? ROOT_FOLDER_LABEL;
 
   useEffect(() => {
-    if (isEditing) {
-      setSettingsDefaultsApplied(true);
-      return;
-    }
-
     if (!defaultsQuery.data) {
       return;
     }
@@ -281,22 +251,20 @@ function PageFormContent({
     setAiProcessingEnabled(defaults.aiProcessingEnabled);
     setVocabularyEnabled(defaults.vocabularyEnabled);
     setSettingsDefaultsApplied(true);
-  }, [defaultsQuery.data, isEditing]);
+  }, [defaultsQuery.data]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
     const nextFormErrors = validatePageForm({
-      canEditName: !isBookPage,
-      isEditing,
       sourceUploadId,
       sourceLanguages,
       targetLanguage,
       name,
-      canInheritSettings: isBookPage,
+      canInheritSettings: false,
     });
 
-    if (hasFormErrors(nextFormErrors)) {
+    if (hasPageFormErrors(nextFormErrors)) {
       setFormErrors(nextFormErrors);
       return;
     }
@@ -304,39 +272,24 @@ function PageFormContent({
     setFormErrors({});
 
     try {
-      const settings = buildSettingsInput(
+      const settings = buildPageSettingsInput(
         sourceLanguages,
         targetLanguage,
         aiProcessingEnabled,
         vocabularyEnabled,
       );
-      let completedPath: string | undefined;
-
-      if (page) {
-        const result = await updatePage({
-          variables: {
-            path: page.path,
-            input: {
-              ...(isBookPage ? {} : { name }),
-              settings,
-            },
+      const result = await createPage({
+        variables: {
+          input: {
+            name,
+            parentPath,
+            sourceUploadId: sourceUploadId!,
+            settings,
           },
-        });
-        completedPath = result.data?.updatePage.path;
-      } else {
-        const result = await createPage({
-          variables: {
-            input: {
-              name,
-              parentPath,
-              sourceUploadId: sourceUploadId!,
-              settings,
-            },
-          },
-        });
-        completedPath = result.data?.createPage.path;
-        void startRunner().catch(() => undefined);
-      }
+        },
+      });
+      const completedPath = result.data?.createPage.path;
+      void startRunner().catch(() => undefined);
 
       await onCompleted?.(completedPath);
       onClose();
@@ -400,7 +353,7 @@ function PageFormContent({
   return (
     <>
       <DialogHeader className="-mx-4 -mt-4 rounded-t-xl border-b px-4 py-4 pr-12">
-        <DialogTitle>{isEditing ? "Edit Page" : "New Page"}</DialogTitle>
+        <DialogTitle>New Page</DialogTitle>
       </DialogHeader>
       {!settingsDefaultsApplied && !settingsDefaultsErrorMessage ? (
         <SettingsDefaultsLoadingState />
@@ -417,44 +370,40 @@ function PageFormContent({
           onSubmit={handleSubmit}
         >
           <FieldGroup className="gap-4">
-            {!isEditing ? (
-              <LargeFileUploadField
-                accept="image/jpeg,image/png,image/webp"
-                autoFocus
-                disabled={saving}
-                error={imageUploadError ?? formErrors.sourceUploadId ?? null}
-                id="page-image"
-                label="Source image"
-                onFileSelected={(file, options) =>
-                  handleSourceFileChange(file, options)
-                }
-                onUploadingChange={setIsImageUploading}
-              />
-            ) : null}
-            {!isBookPage ? (
-              <TextField
-                id="page-name"
-                label="Name"
-                error={formErrors.name}
-                value={name}
-                onChange={(event) => {
-                  setName(event.currentTarget.value);
-                  setFormErrors((currentFormErrors) => ({
-                    ...currentFormErrors,
-                    name: undefined,
-                  }));
-                }}
-              />
-            ) : null}
+            <LargeFileUploadField
+              accept="image/jpeg,image/png,image/webp"
+              autoFocus
+              disabled={saving}
+              error={imageUploadError ?? formErrors.sourceUploadId ?? null}
+              id="page-image"
+              label="Source image"
+              onFileSelected={(file, options) =>
+                handleSourceFileChange(file, options)
+              }
+              onUploadingChange={setIsImageUploading}
+            />
+            <TextField
+              id="page-name"
+              label="Name"
+              error={formErrors.name}
+              value={name}
+              onChange={(event) => {
+                setName(event.currentTarget.value);
+                setFormErrors((currentFormErrors) => ({
+                  ...currentFormErrors,
+                  name: undefined,
+                }));
+              }}
+            />
             <FormSection title="AI Processing">
-              <SettingsFields
+              <PageSettingsFields
                 errors={formErrors}
-                allowInherit={isBookPage}
+                allowInherit={false}
                 aiProcessingEnabled={aiProcessingEnabled}
                 sourceLanguages={sourceLanguages}
-                sourceLanguagesCustomFallback={sourceLanguagesCustomFallback}
+                sourceLanguagesCustomFallback=""
                 targetLanguage={targetLanguage}
-                targetLanguageCustomFallback={targetLanguageCustomFallback}
+                targetLanguageCustomFallback=""
                 vocabularyEnabled={vocabularyEnabled}
                 onAiProcessingEnabledChange={setAiProcessingEnabled}
                 onSourceLanguagesChange={(value) => {
@@ -480,16 +429,8 @@ function PageFormContent({
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           ) : null}
-          <DialogFooter
-            className={
-              canShowFolderLocation
-                ? "flex-col gap-3 sm:items-center sm:justify-between"
-                : undefined
-            }
-          >
-            {canShowFolderLocation ? (
-              <FolderLocationStrip value={parentLabel} />
-            ) : null}
+          <DialogFooter className="flex-col gap-3 sm:items-center sm:justify-between">
+            <FolderLocationStrip value={parentLabel} />
             <Button type="submit" disabled={saving || isImageUploading}>
               {saving ? "Saving" : "Save"}
             </Button>
@@ -535,7 +476,7 @@ function FormSection({
   );
 }
 
-function SettingsFields({
+export function PageSettingsFields({
   allowInherit,
   errors,
   aiProcessingEnabled,
@@ -550,7 +491,7 @@ function SettingsFields({
   onVocabularyEnabledChange,
 }: {
   allowInherit: boolean;
-  errors: Pick<PageFormErrors, "sourceLanguages" | "targetLanguage">;
+  errors: PageSettingsFieldErrors;
   aiProcessingEnabled: boolean | null;
   sourceLanguages: string | null;
   sourceLanguagesCustomFallback: string;
@@ -674,9 +615,7 @@ function InheritableTextField({
 }
 
 function validatePageForm(input: {
-  canEditName: boolean;
   canInheritSettings: boolean;
-  isEditing: boolean;
   sourceUploadId: string | null;
   sourceLanguages: string | null;
   targetLanguage: string | null;
@@ -684,13 +623,25 @@ function validatePageForm(input: {
 }): PageFormErrors {
   const errors: PageFormErrors = {};
 
-  if (!input.isEditing && !input.sourceUploadId) {
+  if (!input.sourceUploadId) {
     errors.sourceUploadId = "Upload a source image before saving.";
   }
 
-  if (input.canEditName && !input.name.trim()) {
+  if (!input.name.trim()) {
     errors.name = "Name is required.";
   }
+
+  Object.assign(errors, validatePageSettingsFields(input));
+
+  return errors;
+}
+
+export function validatePageSettingsFields(input: {
+  canInheritSettings: boolean;
+  sourceLanguages: string | null;
+  targetLanguage: string | null;
+}): PageSettingsFieldErrors {
+  const errors: PageSettingsFieldErrors = {};
 
   if (input.sourceLanguages === null && !input.canInheritSettings) {
     errors.sourceLanguages = "Source languages are required.";
@@ -707,11 +658,13 @@ function validatePageForm(input: {
   return errors;
 }
 
-function hasFormErrors(errors: PageFormErrors): boolean {
+export function hasPageFormErrors(
+  errors: PageFormErrors | PageSettingsFieldErrors,
+): boolean {
   return Object.values(errors).some(Boolean);
 }
 
-function buildSettingsInput(
+export function buildPageSettingsInput(
   sourceLanguages: string | null,
   targetLanguage: string | null,
   aiProcessingEnabled: boolean | null,

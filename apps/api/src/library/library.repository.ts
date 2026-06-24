@@ -115,6 +115,14 @@ export class LibraryRepository {
     return this.readFolderRecord(folderPath);
   }
 
+  async moveFolder(
+    folderPath: string,
+    nextFolderPath: string,
+  ): Promise<FolderRecord> {
+    await this.moveDirectory(folderPath, nextFolderPath, "Folder");
+    return this.readFolderRecord(nextFolderPath);
+  }
+
   async listBooks(): Promise<BookRecord[]> {
     return this.listBookRecords();
   }
@@ -164,7 +172,7 @@ export class LibraryRepository {
   }
 
   async moveBook(bookPath: string, nextBookPath: string): Promise<BookRecord> {
-    await this.moveSpecialDirectory(bookPath, nextBookPath, "Book");
+    await this.moveDirectory(bookPath, nextBookPath, "Book");
     return this.readBookRecord(nextBookPath);
   }
 
@@ -236,7 +244,7 @@ export class LibraryRepository {
   }
 
   async movePage(pagePath: string, nextPagePath: string): Promise<PageRecord> {
-    await this.moveSpecialDirectory(pagePath, nextPagePath, "Page");
+    await this.moveDirectory(pagePath, nextPagePath, "Page");
     return this.readPageRecord(nextPagePath);
   }
 
@@ -349,11 +357,13 @@ export class LibraryRepository {
     }
   }
 
-  private async moveSpecialDirectory(
+  private async moveDirectory(
     entityPath: string,
     nextEntityPath: string,
     entityName: string,
   ): Promise<void> {
+    await this.assertLibraryDirectoryDoesNotExist(nextEntityPath, entityName);
+
     try {
       await rename(
         this.getLibraryDirectory(entityPath),
@@ -370,6 +380,24 @@ export class LibraryRepository {
           `${entityName} ${entityPath} was not found.`,
         );
       }
+      throw error;
+    }
+  }
+
+  private async assertLibraryDirectoryDoesNotExist(
+    libraryPath: string,
+    entityName: string,
+  ): Promise<void> {
+    try {
+      await readdir(this.getLibraryDirectory(libraryPath));
+      throw new BadRequestException(
+        `${entityName} ${libraryPath} already exists.`,
+      );
+    } catch (error) {
+      if (isFileNotFoundError(error)) {
+        return;
+      }
+
       throw error;
     }
   }

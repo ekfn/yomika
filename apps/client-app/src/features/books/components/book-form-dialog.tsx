@@ -1,24 +1,19 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery } from "@apollo/client/react";
-import { Pencil, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   formatUploadFileSize,
-  getBookDisplayName,
-  getContainingFolderPath,
   OCR_BOOK_ALLOWED_MIME_TYPES,
   OCR_BOOK_UPLOAD_MAX_FILE_SIZE_BYTES,
 } from "@yomika/shared";
 import {
-  type BookListFieldsFragment,
   type BookSettingsInput,
   CreateBookDocument,
   LibrarySettingsDefaultsDocument,
   StartRunnerDocument,
-  UpdateBookDocument,
 } from "@/graphql/generated/graphql";
 import {
   FolderLocationStrip,
-  getFolderLocationLabel,
   ROOT_FOLDER_LABEL,
 } from "@/features/library/components/folder-location-info";
 import { AiProcessingFeatureField } from "@/features/processing-settings/components/ai-processing-feature-field";
@@ -41,7 +36,6 @@ import { TextField } from "@/components/ui/text-field";
 import { getNameFromFileName } from "@/lib/file-name";
 
 type BookFormDialogProps = {
-  book?: BookListFieldsFragment;
   defaultParentPath?: string | null;
   defaultParentLabel?: string | null;
   open?: boolean;
@@ -53,12 +47,14 @@ type BookFormDialogProps = {
 type BookFormErrors = {
   sourceUploadId?: string | undefined;
   name?: string | undefined;
+} & BookSettingsFieldErrors;
+
+export type BookSettingsFieldErrors = {
   sourceLanguages?: string | undefined;
   targetLanguage?: string | undefined;
 };
 
 type BookFormContentProps = {
-  book: BookListFieldsFragment | undefined;
   defaultParentPath: string | null | undefined;
   defaultParentLabel: string | null | undefined;
   onClose: () => void;
@@ -83,7 +79,6 @@ function validateBookPdf(file: File): string | null {
 }
 
 export function BookFormDialog({
-  book,
   defaultParentPath,
   defaultParentLabel,
   open: controlledOpen,
@@ -91,7 +86,6 @@ export function BookFormDialog({
   onOpenChange,
   onCompleted,
 }: BookFormDialogProps) {
-  const isEditing = Boolean(book);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
 
@@ -105,9 +99,9 @@ export function BookFormDialog({
       {trigger !== null ? (
         <DialogTrigger asChild>
           {trigger ?? (
-            <Button variant={isEditing ? "outline" : "default"}>
-              {isEditing ? <Pencil /> : <Plus />}
-              {isEditing ? "Edit Book" : "New Book"}
+            <Button variant="default">
+              <Plus />
+              New Book
             </Button>
           )}
         </DialogTrigger>
@@ -115,7 +109,6 @@ export function BookFormDialog({
       <DialogContent className="sm:max-w-lg">
         {open ? (
           <BookFormContent
-            book={book}
             defaultParentPath={defaultParentPath}
             defaultParentLabel={defaultParentLabel}
             onClose={() => handleOpenChange(false)}
@@ -128,28 +121,17 @@ export function BookFormDialog({
 }
 
 function BookFormContent({
-  book,
   defaultParentPath,
   defaultParentLabel,
   onClose,
   onCompleted,
 }: BookFormContentProps) {
-  const isEditing = Boolean(book);
-  const [name, setName] = useState(book ? getBookDisplayName(book.path) : "");
-  const [sourceLanguages, setSourceLanguages] = useState(
-    book?.settings.translationSourceLanguages.join(", ") ?? "",
-  );
-  const [targetLanguage, setTargetLanguage] = useState(
-    book?.settings.translationTargetLanguage ?? "",
-  );
-  const [aiProcessingEnabled, setAiProcessingEnabled] = useState(
-    book?.settings.aiProcessingEnabled ?? true,
-  );
-  const [vocabularyEnabled, setVocabularyEnabled] = useState(
-    book?.settings.vocabularyEnabled ?? false,
-  );
-  const [settingsDefaultsApplied, setSettingsDefaultsApplied] =
-    useState(isEditing);
+  const [name, setName] = useState("");
+  const [sourceLanguages, setSourceLanguages] = useState("");
+  const [targetLanguage, setTargetLanguage] = useState("");
+  const [aiProcessingEnabled, setAiProcessingEnabled] = useState(true);
+  const [vocabularyEnabled, setVocabularyEnabled] = useState(false);
+  const [settingsDefaultsApplied, setSettingsDefaultsApplied] = useState(false);
   const [sourceUploadId, setSourceUploadId] = useState<string | null>(null);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
   const [isPdfUploading, setIsPdfUploading] = useState(false);
@@ -157,26 +139,15 @@ function BookFormContent({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createBook, createState] = useMutation(CreateBookDocument);
   const [startRunner] = useMutation(StartRunnerDocument);
-  const [updateBook, updateState] = useMutation(UpdateBookDocument);
-  const defaultsQuery = useQuery(LibrarySettingsDefaultsDocument, {
-    skip: isEditing,
-  });
-  const saving = createState.loading || updateState.loading;
-  const settingsDefaultsErrorMessage =
-    !isEditing && defaultsQuery.error ? defaultsQuery.error.message : null;
-  const parentPath = book
-    ? getContainingFolderPath(book.path)
-    : (defaultParentPath ?? null);
-  const parentLabel = book
-    ? getFolderLocationLabel(parentPath)
-    : (defaultParentLabel ?? ROOT_FOLDER_LABEL);
+  const defaultsQuery = useQuery(LibrarySettingsDefaultsDocument);
+  const saving = createState.loading;
+  const settingsDefaultsErrorMessage = defaultsQuery.error
+    ? defaultsQuery.error.message
+    : null;
+  const parentPath = defaultParentPath ?? null;
+  const parentLabel = defaultParentLabel ?? ROOT_FOLDER_LABEL;
 
   useEffect(() => {
-    if (isEditing) {
-      setSettingsDefaultsApplied(true);
-      return;
-    }
-
     if (!defaultsQuery.data) {
       return;
     }
@@ -196,20 +167,19 @@ function BookFormContent({
     setAiProcessingEnabled(defaults.aiProcessingEnabled);
     setVocabularyEnabled(defaults.vocabularyEnabled);
     setSettingsDefaultsApplied(true);
-  }, [defaultsQuery.data, isEditing]);
+  }, [defaultsQuery.data]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
     const nextFormErrors = validateBookForm({
-      isEditing,
       sourceUploadId,
       sourceLanguages,
       targetLanguage,
       name,
     });
 
-    if (hasFormErrors(nextFormErrors)) {
+    if (hasBookFormErrors(nextFormErrors)) {
       setFormErrors(nextFormErrors);
       return;
     }
@@ -217,39 +187,24 @@ function BookFormContent({
     setFormErrors({});
 
     try {
-      const settings = buildSettingsInput(
+      const settings = buildBookSettingsInput(
         sourceLanguages,
         targetLanguage,
         aiProcessingEnabled,
         vocabularyEnabled,
       );
-      let completedPath: string | undefined;
-
-      if (book) {
-        const result = await updateBook({
-          variables: {
-            path: book.path,
-            input: {
-              name,
-              settings,
-            },
+      const result = await createBook({
+        variables: {
+          input: {
+            name,
+            parentPath,
+            sourceUploadId: sourceUploadId!,
+            settings,
           },
-        });
-        completedPath = result.data?.updateBook.path;
-      } else {
-        const result = await createBook({
-          variables: {
-            input: {
-              name,
-              parentPath,
-              sourceUploadId: sourceUploadId!,
-              settings,
-            },
-          },
-        });
-        completedPath = result.data?.createBook.path;
-        void startRunner().catch(() => undefined);
-      }
+        },
+      });
+      const completedPath = result.data?.createBook.path;
+      void startRunner().catch(() => undefined);
 
       await onCompleted?.(completedPath);
       onClose();
@@ -313,7 +268,7 @@ function BookFormContent({
   return (
     <>
       <DialogHeader className="-mx-4 -mt-4 rounded-t-xl border-b px-4 py-4 pr-12">
-        <DialogTitle>{isEditing ? "Edit Book" : "New Book"}</DialogTitle>
+        <DialogTitle>New Book</DialogTitle>
       </DialogHeader>
       {!settingsDefaultsApplied && !settingsDefaultsErrorMessage ? (
         <SettingsDefaultsLoadingState />
@@ -330,19 +285,17 @@ function BookFormContent({
           onSubmit={handleSubmit}
         >
           <FieldGroup className="gap-4">
-            {!isEditing ? (
-              <LargeFileUploadField
-                accept="application/pdf,.pdf"
-                disabled={saving}
-                error={pdfUploadError ?? formErrors.sourceUploadId ?? null}
-                id="book-pdf"
-                label="Source PDF"
-                onFileSelected={(file, options) =>
-                  handleSourceFileChange(file, options)
-                }
-                onUploadingChange={setIsPdfUploading}
-              />
-            ) : null}
+            <LargeFileUploadField
+              accept="application/pdf,.pdf"
+              disabled={saving}
+              error={pdfUploadError ?? formErrors.sourceUploadId ?? null}
+              id="book-pdf"
+              label="Source PDF"
+              onFileSelected={(file, options) =>
+                handleSourceFileChange(file, options)
+              }
+              onUploadingChange={setIsPdfUploading}
+            />
             <TextField
               id="book-name"
               label="Name"
@@ -357,7 +310,7 @@ function BookFormContent({
               }}
             />
             <FormSection title="AI Processing">
-              <SettingsFields
+              <BookSettingsFields
                 errors={formErrors}
                 aiProcessingEnabled={aiProcessingEnabled}
                 sourceLanguages={sourceLanguages}
@@ -434,7 +387,7 @@ function FormSection({
   );
 }
 
-function SettingsFields({
+export function BookSettingsFields({
   errors,
   aiProcessingEnabled,
   sourceLanguages,
@@ -445,7 +398,7 @@ function SettingsFields({
   onTargetLanguageChange,
   onVocabularyEnabledChange,
 }: {
-  errors: Pick<BookFormErrors, "sourceLanguages" | "targetLanguage">;
+  errors: BookSettingsFieldErrors;
   aiProcessingEnabled: boolean;
   sourceLanguages: string;
   targetLanguage: string;
@@ -492,7 +445,6 @@ function SettingsFields({
 }
 
 function validateBookForm(input: {
-  isEditing: boolean;
   sourceUploadId: string | null;
   sourceLanguages: string;
   targetLanguage: string;
@@ -500,13 +452,24 @@ function validateBookForm(input: {
 }): BookFormErrors {
   const errors: BookFormErrors = {};
 
-  if (!input.isEditing && !input.sourceUploadId) {
+  if (!input.sourceUploadId) {
     errors.sourceUploadId = "Upload a source PDF before saving.";
   }
 
   if (!input.name.trim()) {
     errors.name = "Name is required.";
   }
+
+  Object.assign(errors, validateBookSettingsFields(input));
+
+  return errors;
+}
+
+export function validateBookSettingsFields(input: {
+  sourceLanguages: string;
+  targetLanguage: string;
+}): BookSettingsFieldErrors {
+  const errors: BookSettingsFieldErrors = {};
 
   if (!input.sourceLanguages.trim()) {
     errors.sourceLanguages = "Source languages are required.";
@@ -519,11 +482,13 @@ function validateBookForm(input: {
   return errors;
 }
 
-function hasFormErrors(errors: BookFormErrors): boolean {
+export function hasBookFormErrors(
+  errors: BookFormErrors | BookSettingsFieldErrors,
+): boolean {
   return Object.values(errors).some(Boolean);
 }
 
-function buildSettingsInput(
+export function buildBookSettingsInput(
   sourceLanguages: string,
   targetLanguage: string,
   aiProcessingEnabled: boolean,

@@ -120,6 +120,12 @@ query Folder($path: String!) {
   }
 }
 
+query Folders($parentPath: String) {
+  folders(parentPath: $parentPath) {
+    ...FolderFields
+  }
+}
+
 query Book($path: String!) {
   book(path: $path) {
     ...BookListFields
@@ -165,6 +171,18 @@ mutation CreateFolder($input: CreateFolderInput!) {
   }
 }
 
+mutation UpdateFolder($path: String!, $input: UpdateFolderInput!) {
+  updateFolder(path: $path, input: $input) {
+    ...FolderFields
+  }
+}
+
+mutation MoveFolder($path: String!, $input: MoveFolderInput!) {
+  moveFolder(path: $path, input: $input) {
+    ...FolderFields
+  }
+}
+
 mutation CreateBook($input: CreateBookInput!) {
   createBook(input: $input) {
     ...BookListFields
@@ -173,6 +191,12 @@ mutation CreateBook($input: CreateBookInput!) {
 
 mutation UpdateBook($path: String!, $input: UpdateBookInput!) {
   updateBook(path: $path, input: $input) {
+    ...BookListFields
+  }
+}
+
+mutation MoveBook($path: String!, $input: MoveBookInput!) {
+  moveBook(path: $path, input: $input) {
     ...BookListFields
   }
 }
@@ -195,6 +219,12 @@ mutation UpdatePage($path: String!, $input: UpdatePageInput!) {
     ocrStatus
     aiProcessingStatus
     updatedAt
+  }
+}
+
+mutation MovePage($path: String!, $input: MovePageInput!) {
+  movePage(path: $path, input: $input) {
+    ...PageListFields
   }
 }
 

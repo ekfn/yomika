@@ -20,21 +20,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui";
+import { GuardedDropdownMenuItem } from "@/components/common/guarded-dropdown-menu-item";
 import { BookDetailTabs } from "@/features/books/components/book-detail-tabs";
-import { BookFormDialog } from "@/features/books/components/book-form-dialog";
-import { BookDocument } from "@/graphql/generated/graphql";
+import { BookOptionsDialog } from "@/features/books/components/book-options-dialog";
+import { BookRenameDialog } from "@/features/books/components/book-rename-dialog";
+import {
+  BookDocument,
+  RunnerState,
+  RunnerStatusDocument,
+} from "@/graphql/generated/graphql";
 import { getBookRoute, getLibraryFolderRoute } from "@/lib/library-paths";
 
 export function BookDetailRoute() {
   const { "*": path } = useParams();
   const navigate = useNavigate();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [isOptionsDialogOpen, setIsOptionsDialogOpen] = useState(false);
   const { data, loading, error, refetch } = useQuery(BookDocument, {
     variables: {
       path: path ?? "",
     },
     skip: !path,
   });
+  const runnerStatusQuery = useQuery(RunnerStatusDocument);
+  const isRunnerRunning =
+    runnerStatusQuery.data?.runnerStatus.state === RunnerState.Running;
 
   if (!path) {
     return (
@@ -118,12 +128,21 @@ export function BookDetailRoute() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuGroup>
-                  <DropdownMenuItem
+                  <GuardedDropdownMenuItem
+                    disabled={isRunnerRunning}
+                    tooltip="Wait until the runner finishes or stop it before renaming items."
                     onSelect={() => {
-                      setIsEditDialogOpen(true);
+                      setIsRenameDialogOpen(true);
                     }}
                   >
-                    Edit Book
+                    Rename Book
+                  </GuardedDropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setIsOptionsDialogOpen(true);
+                    }}
+                  >
+                    Edit Book Options
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -132,11 +151,11 @@ export function BookDetailRoute() {
         }
       />
 
-      <BookFormDialog
+      <BookRenameDialog
         book={book}
-        open={isEditDialogOpen}
+        open={isRenameDialogOpen}
         trigger={null}
-        onOpenChange={setIsEditDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
         onCompleted={async (nextPath) => {
           if (nextPath && nextPath !== book.path) {
             navigate(getBookRoute(nextPath), { replace: true });
@@ -146,9 +165,19 @@ export function BookDetailRoute() {
           await refetch();
         }}
       />
+      <BookOptionsDialog
+        book={book}
+        open={isOptionsDialogOpen}
+        trigger={null}
+        onOpenChange={setIsOptionsDialogOpen}
+        onCompleted={async () => {
+          await refetch();
+        }}
+      />
 
       <BookDetailTabs
         book={book}
+        isRunnerRunning={isRunnerRunning}
         onPageChanged={async () => {
           await refetch();
         }}

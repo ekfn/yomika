@@ -165,12 +165,27 @@ input LoginInput {
   password: String!
 }
 
+input MoveBookInput {
+  targetParentPath: String
+}
+
+input MoveFolderInput {
+  targetParentPath: String
+}
+
+input MovePageInput {
+  targetParentPath: String
+}
+
 type Mutation {
   createBook(input: CreateBookInput!): Book!
   createFolder(input: CreateFolderInput!): Folder!
   createPage(input: CreatePageInput!): Page!
   login(input: LoginInput!): CurrentUser!
   logout: Boolean!
+  moveBook(input: MoveBookInput!, path: String!): Book!
+  moveFolder(input: MoveFolderInput!, path: String!): Folder!
+  movePage(input: MovePageInput!, path: String!): Page!
   noop: Boolean!
   overwritePageSourceImage(
     input: OverwritePageSourceImageInput!
@@ -182,6 +197,7 @@ type Mutation {
     input: UpdateAiProcessingConfigInput!
   ): AiProcessingConfig!
   updateBook(input: UpdateBookInput!, path: String!): Book!
+  updateFolder(input: UpdateFolderInput!, path: String!): Folder!
   updatePage(input: UpdatePageInput!, path: String!): Page!
   updatePageSegmentSourceText(
     input: UpdatePageSegmentSourceTextInput!
@@ -361,6 +377,10 @@ input UpdateAiProcessingConfigInput {
 input UpdateBookInput {
   name: String
   settings: BookSettingsInput
+}
+
+input UpdateFolderInput {
+  name: String!
 }
 
 input UpdatePageInput {

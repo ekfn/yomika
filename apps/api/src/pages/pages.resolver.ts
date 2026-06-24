@@ -31,6 +31,10 @@ type UpdatePageInput = {
   } | null;
 };
 
+type MovePageInput = {
+  targetParentPath?: string | null;
+};
+
 type OverwritePageSourceImageInput = {
   sourceUploadId: string;
 };
@@ -81,6 +85,14 @@ export class PagesResolver {
     @Args("input") input: UpdatePageInput,
   ): Promise<PageOutput> {
     return this.pagesService.updatePage(path, input);
+  }
+
+  @Mutation("movePage")
+  movePage(
+    @Args("path") path: string,
+    @Args("input") input: MovePageInput,
+  ): Promise<PageOutput> {
+    return this.pagesService.movePage(path, input);
   }
 
   @Mutation("overwritePageSourceImage")

@@ -124,9 +124,11 @@ function BookInfoPagePreview({ page }: { page: BookInfoPage }) {
 }
 
 function BookInfoPagesCard({
+  isRunnerRunning,
   pages,
   onPageChanged,
 }: {
+  isRunnerRunning: boolean;
   pages: readonly BookInfoPage[];
   onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
 }) {
@@ -201,6 +203,7 @@ function BookInfoPagesCard({
                       <PageActionsMenu
                         name={pageTitle}
                         page={page}
+                        isRunnerRunning={isRunnerRunning}
                         onCompleted={onPageChanged}
                       />
                     </div>
@@ -229,9 +232,11 @@ function BookInfoPagesCard({
 
 export function BookInfoTab({
   book,
+  isRunnerRunning,
   onPageChanged,
 }: {
   book: BookDetail;
+  isRunnerRunning: boolean;
   onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
 }) {
   return (
@@ -312,7 +317,11 @@ export function BookInfoTab({
         </CardContent>
       </Card>
 
-      <BookInfoPagesCard pages={book.pages} onPageChanged={onPageChanged} />
+      <BookInfoPagesCard
+        isRunnerRunning={isRunnerRunning}
+        pages={book.pages}
+        onPageChanged={onPageChanged}
+      />
     </div>
   );
 }

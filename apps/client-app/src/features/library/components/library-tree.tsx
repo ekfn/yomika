@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
   TooltipProvider,
 } from "@/components/ui";
+import { GuardedDropdownMenuItem } from "@/components/common/guarded-dropdown-menu-item";
 import type {
   BookListFieldsFragment,
   FolderFieldsFragment,
@@ -48,6 +49,8 @@ import { getBookRoute, getPageRoute } from "@/lib/library-paths";
 import { appendMediaCacheBuster } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 import { BookFormDialog } from "@/features/books/components/book-form-dialog";
+import { BookOptionsDialog } from "@/features/books/components/book-options-dialog";
+import { BookRenameDialog } from "@/features/books/components/book-rename-dialog";
 import { PageFormDialog } from "@/features/pages/components/page-form-dialog";
 import { PageProcessingStatusBadges } from "@/features/pages/components/page-processing-status-badges";
 import { PageActionsMenu } from "@/features/pages/components/page-actions-menu";
@@ -56,7 +59,9 @@ import {
   VocabularyDisabledBadge,
 } from "@/features/processing-settings/components/processing-disabled-badges";
 import { FolderFormDialog } from "./folder-form-dialog";
+import { FolderRenameDialog } from "./folder-rename-dialog";
 import { getFolderLocationLabel } from "./folder-location-info";
+import { LibraryItemMoveDialog } from "./library-item-move-dialog";
 
 const TREE_ROOT_ITEM_ID = "tree-root";
 const LIBRARY_ROOT_ITEM_ID = "library-root";
@@ -118,10 +123,14 @@ type LibraryTreeItem =
 type LibraryTreeProps = {
   books: readonly LibraryTreeBook[];
   folders: readonly LibraryTreeFolder[];
+  isRunnerRunning?: boolean;
   loadingFolderPaths?: readonly string[];
   pages: readonly LibraryTreePage[];
   targetFolderPath?: string | null;
   onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+  onContentMoved: (
+    parentPaths: readonly (string | null)[],
+  ) => Promise<void> | void;
   onFolderContentsRequested?: (folderPath: string) => Promise<void> | void;
   onFoldersChanged: (parentPath?: string | null) => Promise<void> | void;
   onTargetFolderOpened?: () => void;
@@ -382,8 +391,8 @@ const LibraryTreeLoadingRow = memo(function LibraryTreeLoadingRow({
 function CreateBookMenuItem({ onSelect }: { onSelect: () => void }) {
   return (
     <DropdownMenuItem onSelect={onSelect}>
-      <LibraryBigIcon aria-hidden="true" />
-      Create book
+      <LibraryBigIcon className="text-sky-700" aria-hidden="true" />
+      Create Book
     </DropdownMenuItem>
   );
 }
@@ -391,8 +400,8 @@ function CreateBookMenuItem({ onSelect }: { onSelect: () => void }) {
 function CreatePageMenuItem({ onSelect }: { onSelect: () => void }) {
   return (
     <DropdownMenuItem onSelect={onSelect}>
-      <FileTextIcon aria-hidden="true" />
-      Create page
+      <FileTextIcon className="text-emerald-700" aria-hidden="true" />
+      Create Page
     </DropdownMenuItem>
   );
 }
@@ -400,9 +409,29 @@ function CreatePageMenuItem({ onSelect }: { onSelect: () => void }) {
 function CreateFolderMenuItem({ onSelect }: { onSelect: () => void }) {
   return (
     <DropdownMenuItem onSelect={onSelect}>
-      <FolderIcon aria-hidden="true" />
-      Create folder
+      <FolderIcon className="text-amber-600" aria-hidden="true" />
+      Create Folder
     </DropdownMenuItem>
+  );
+}
+
+function MoveMenuItem({
+  disabled,
+  label,
+  onSelect,
+}: {
+  disabled: boolean;
+  label: string;
+  onSelect: () => void;
+}) {
+  return (
+    <GuardedDropdownMenuItem
+      disabled={disabled}
+      tooltip="Wait until the runner finishes or stop it before moving items."
+      onSelect={onSelect}
+    >
+      {label}
+    </GuardedDropdownMenuItem>
   );
 }
 
@@ -458,9 +487,6 @@ function LibraryTreeRootActions({
                 setIsCreatePageOpen(true);
               }}
             />
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
             <CreateFolderMenuItem
               onSelect={() => {
                 setIsCreateFolderOpen(true);
@@ -531,18 +557,26 @@ const LibraryTreeRootRow = memo(function LibraryTreeRootRow({
 
 function LibraryTreeFolderActions({
   folder,
+  isRunnerRunning,
   onContentCreated,
   onContentChanged,
+  onContentMoved,
   onFolderUpdated,
 }: {
   folder: LibraryTreeFolder;
+  isRunnerRunning: boolean;
   onContentCreated: (parentPath: string | null) => void;
   onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+  onContentMoved: (
+    parentPaths: readonly (string | null)[],
+  ) => Promise<void> | void;
   onFolderUpdated: (parentPath?: string | null) => Promise<void> | void;
 }) {
   const [isCreateBookOpen, setIsCreateBookOpen] = useState(false);
   const [isCreatePageOpen, setIsCreatePageOpen] = useState(false);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
   const folderName = getFolderDisplayName(folder.path);
   const folderLocationLabel = getFolderLocationLabel(folder.path);
 
@@ -558,6 +592,18 @@ function LibraryTreeFolderActions({
   const handleFolderCreated = async () => {
     await onFolderUpdated(folder.path);
     onContentCreated(folder.path);
+  };
+
+  const handleRenamed = async (path?: string) => {
+    await onFolderUpdated(getLibraryPathParent(path ?? folder.path));
+  };
+
+  const handleMoved = async (input: {
+    previousParentPath: string | null;
+    targetParentPath: string | null;
+  }) => {
+    await onContentMoved([input.previousParentPath, input.targetParentPath]);
+    onContentCreated(input.targetParentPath);
   };
 
   return (
@@ -585,12 +631,28 @@ function LibraryTreeFolderActions({
                 setIsCreatePageOpen(true);
               }}
             />
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
             <CreateFolderMenuItem
               onSelect={() => {
                 setIsCreateFolderOpen(true);
+              }}
+            />
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <GuardedDropdownMenuItem
+              disabled={isRunnerRunning}
+              tooltip="Wait until the runner finishes or stop it before renaming items."
+              onSelect={() => {
+                setIsRenameOpen(true);
+              }}
+            >
+              Rename Folder
+            </GuardedDropdownMenuItem>
+            <MoveMenuItem
+              disabled={isRunnerRunning}
+              label="Move Folder"
+              onSelect={() => {
+                setIsMoveOpen(true);
               }}
             />
           </DropdownMenuGroup>
@@ -620,6 +682,21 @@ function LibraryTreeFolderActions({
         onCompleted={handleFolderCreated}
         onOpenChange={setIsCreateFolderOpen}
       />
+      <FolderRenameDialog
+        folder={folder}
+        open={isRenameOpen}
+        trigger={null}
+        onCompleted={handleRenamed}
+        onOpenChange={setIsRenameOpen}
+      />
+      <LibraryItemMoveDialog
+        kind="folder"
+        open={isMoveOpen}
+        path={folder.path}
+        trigger={null}
+        onCompleted={handleMoved}
+        onOpenChange={setIsMoveOpen}
+      />
     </div>
   );
 }
@@ -627,14 +704,20 @@ function LibraryTreeFolderActions({
 const LibraryTreeFolderRow = memo(function LibraryTreeFolderRow({
   item,
   isExpanded,
+  isRunnerRunning,
   onContentCreated,
   onContentChanged,
+  onContentMoved,
   onFolderUpdated,
 }: {
   isExpanded: boolean;
+  isRunnerRunning: boolean;
   item: Extract<LibraryTreeItem, { kind: "folder" }>;
   onContentCreated: (parentPath: string | null) => void;
   onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+  onContentMoved: (
+    parentPaths: readonly (string | null)[],
+  ) => Promise<void> | void;
   onFolderUpdated: (parentPath?: string | null) => Promise<void> | void;
 }) {
   return (
@@ -655,8 +738,10 @@ const LibraryTreeFolderRow = memo(function LibraryTreeFolderRow({
       </span>
       <LibraryTreeFolderActions
         folder={item.folder}
+        isRunnerRunning={isRunnerRunning}
         onContentCreated={onContentCreated}
         onContentChanged={onContentChanged}
+        onContentMoved={onContentMoved}
         onFolderUpdated={onFolderUpdated}
       />
     </>
@@ -665,18 +750,38 @@ const LibraryTreeFolderRow = memo(function LibraryTreeFolderRow({
 
 function LibraryTreeBookActions({
   book,
+  isRunnerRunning,
+  onContentCreated,
   onContentChanged,
+  onContentMoved,
 }: {
   book: LibraryTreeBook;
+  isRunnerRunning: boolean;
+  onContentCreated: (parentPath: string | null) => void;
   onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+  onContentMoved: (
+    parentPaths: readonly (string | null)[],
+  ) => Promise<void> | void;
 }) {
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
   const bookName = getBookDisplayName(book.path);
   const handleMenuClick = (event: MouseEvent) => {
     event.stopPropagation();
   };
-  const handleCompleted = async (path?: string) => {
+  const handleRenameCompleted = async (path?: string) => {
     await onContentChanged(getContainingFolderPath(path ?? book.path));
+  };
+  const handleOptionsCompleted = async (path?: string) => {
+    await onContentChanged(getContainingFolderPath(path ?? book.path));
+  };
+  const handleMoved = async (input: {
+    previousParentPath: string | null;
+    targetParentPath: string | null;
+  }) => {
+    await onContentMoved([input.previousParentPath, input.targetParentPath]);
+    onContentCreated(input.targetParentPath);
   };
 
   return (
@@ -700,25 +805,59 @@ function LibraryTreeBookActions({
                 target="_blank"
                 rel="noreferrer"
               >
-                Open book
+                Open Book
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => {
-                setIsEditOpen(true);
+                setIsOptionsOpen(true);
               }}
             >
-              Edit book
+              Edit Book Options
             </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <GuardedDropdownMenuItem
+              disabled={isRunnerRunning}
+              tooltip="Wait until the runner finishes or stop it before renaming items."
+              onSelect={() => {
+                setIsRenameOpen(true);
+              }}
+            >
+              Rename Book
+            </GuardedDropdownMenuItem>
+            <MoveMenuItem
+              disabled={isRunnerRunning}
+              label="Move Book"
+              onSelect={() => {
+                setIsMoveOpen(true);
+              }}
+            />
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-      <BookFormDialog
+      <BookRenameDialog
         book={book}
-        open={isEditOpen}
+        open={isRenameOpen}
         trigger={null}
-        onCompleted={handleCompleted}
-        onOpenChange={setIsEditOpen}
+        onCompleted={handleRenameCompleted}
+        onOpenChange={setIsRenameOpen}
+      />
+      <BookOptionsDialog
+        book={book}
+        open={isOptionsOpen}
+        trigger={null}
+        onCompleted={handleOptionsCompleted}
+        onOpenChange={setIsOptionsOpen}
+      />
+      <LibraryItemMoveDialog
+        kind="book"
+        open={isMoveOpen}
+        path={book.path}
+        trigger={null}
+        onCompleted={handleMoved}
+        onOpenChange={setIsMoveOpen}
       />
     </div>
   );
@@ -726,12 +865,20 @@ function LibraryTreeBookActions({
 
 const LibraryTreeBookRow = memo(function LibraryTreeBookRow({
   isExpanded,
+  isRunnerRunning,
   item,
+  onContentCreated,
   onContentChanged,
+  onContentMoved,
 }: {
   isExpanded: boolean;
+  isRunnerRunning: boolean;
   item: Extract<LibraryTreeItem, { kind: "book" }>;
+  onContentCreated: (parentPath: string | null) => void;
   onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+  onContentMoved: (
+    parentPaths: readonly (string | null)[],
+  ) => Promise<void> | void;
 }) {
   const isImportComplete = item.book.importStatus === "COMPLETE";
 
@@ -772,27 +919,75 @@ const LibraryTreeBookRow = memo(function LibraryTreeBookRow({
       )}
       <LibraryTreeBookActions
         book={item.book}
+        isRunnerRunning={isRunnerRunning}
+        onContentCreated={onContentCreated}
         onContentChanged={onContentChanged}
+        onContentMoved={onContentMoved}
       />
     </>
   );
 });
 
 function LibraryTreePageActions({
+  isRunnerRunning,
   onContentChanged,
+  onContentCreated,
+  onContentMoved,
   page,
   name,
 }: {
+  isRunnerRunning: boolean;
   onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+  onContentCreated: (parentPath: string | null) => void;
+  onContentMoved: (
+    parentPaths: readonly (string | null)[],
+  ) => Promise<void> | void;
   page: LibraryTreePage;
   name: string;
 }) {
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
   const handleCompleted = async (path?: string) => {
     await onContentChanged(getContainingFolderPath(path ?? page.path));
   };
+  const handleMoved = async (input: {
+    previousParentPath: string | null;
+    targetParentPath: string | null;
+  }) => {
+    await onContentMoved([input.previousParentPath, input.targetParentPath]);
+    onContentCreated(input.targetParentPath);
+  };
+  const canMovePage = !page.bookPath;
 
   return (
-    <PageActionsMenu name={name} page={page} onCompleted={handleCompleted} />
+    <PageActionsMenu
+      name={name}
+      page={page}
+      isRunnerRunning={isRunnerRunning}
+      extraMenuItems={
+        canMovePage ? (
+          <MoveMenuItem
+            disabled={isRunnerRunning}
+            label="Move Page"
+            onSelect={() => {
+              setIsMoveOpen(true);
+            }}
+          />
+        ) : null
+      }
+      extraDialogs={
+        canMovePage ? (
+          <LibraryItemMoveDialog
+            kind="page"
+            open={isMoveOpen}
+            path={page.path}
+            trigger={null}
+            onCompleted={handleMoved}
+            onOpenChange={setIsMoveOpen}
+          />
+        ) : null
+      }
+      onCompleted={handleCompleted}
+    />
   );
 }
 
@@ -825,11 +1020,19 @@ const LibraryTreePagePreview = memo(function LibraryTreePagePreview({
 });
 
 const LibraryTreePageRow = memo(function LibraryTreePageRow({
+  isRunnerRunning,
   item,
+  onContentCreated,
   onContentChanged,
+  onContentMoved,
 }: {
+  isRunnerRunning: boolean;
   item: Extract<LibraryTreeItem, { kind: "page" }>;
+  onContentCreated: (parentPath: string | null) => void;
   onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+  onContentMoved: (
+    parentPaths: readonly (string | null)[],
+  ) => Promise<void> | void;
 }) {
   return (
     <>
@@ -845,7 +1048,10 @@ const LibraryTreePageRow = memo(function LibraryTreePageRow({
         vocabularyEnabled={item.page.effectiveSettings.vocabularyEnabled}
       />
       <LibraryTreePageActions
+        isRunnerRunning={isRunnerRunning}
         onContentChanged={onContentChanged}
+        onContentCreated={onContentCreated}
+        onContentMoved={onContentMoved}
         page={item.page}
         name={item.name}
       />
@@ -859,11 +1065,17 @@ const LibraryTreeCollapsedBookFirstPageRow = memo(
     pageItem,
     bookSourcePageCount,
     onContentChanged,
+    onContentCreated,
+    onContentMoved,
   }: {
     bookSourcePageCount?: number | null | undefined;
     level: number;
     pageItem: Extract<LibraryTreeItem, { kind: "page" }>;
+    onContentCreated: (parentPath: string | null) => void;
     onContentChanged: (parentPath?: string | null) => Promise<void> | void;
+    onContentMoved: (
+      parentPaths: readonly (string | null)[],
+    ) => Promise<void> | void;
   }) {
     const style = getTreeIndentStyle(level);
     const openPage = () => {
@@ -898,8 +1110,11 @@ const LibraryTreeCollapsedBookFirstPageRow = memo(
         onKeyDown={handleKeyDown}
       >
         <LibraryTreePageRow
+          isRunnerRunning={false}
           item={pageItem}
+          onContentCreated={onContentCreated}
           onContentChanged={onContentChanged}
+          onContentMoved={onContentMoved}
         />
       </div>
     );
@@ -909,10 +1124,12 @@ const LibraryTreeCollapsedBookFirstPageRow = memo(
 export function LibraryTree({
   books,
   folders,
+  isRunnerRunning = false,
   loadingFolderPaths = [],
   pages,
   targetFolderPath,
   onContentChanged,
+  onContentMoved,
   onFolderContentsRequested,
   onFoldersChanged,
   onTargetFolderOpened,
@@ -1371,21 +1588,29 @@ export function LibraryTree({
           ) : itemData.kind === "folder" ? (
             <LibraryTreeFolderRow
               isExpanded={isExpanded}
+              isRunnerRunning={isRunnerRunning}
               item={itemData}
               onContentCreated={handleContentCreated}
               onContentChanged={onContentChanged}
+              onContentMoved={onContentMoved}
               onFolderUpdated={onFoldersChanged}
             />
           ) : itemData.kind === "book" ? (
             <LibraryTreeBookRow
               isExpanded={isExpanded}
+              isRunnerRunning={isRunnerRunning}
               item={itemData}
+              onContentCreated={handleContentCreated}
               onContentChanged={onContentChanged}
+              onContentMoved={onContentMoved}
             />
           ) : itemData.kind === "page" ? (
             <LibraryTreePageRow
+              isRunnerRunning={isRunnerRunning}
               item={itemData}
+              onContentCreated={handleContentCreated}
               onContentChanged={onContentChanged}
+              onContentMoved={onContentMoved}
             />
           ) : null}
         </div>
@@ -1396,7 +1621,9 @@ export function LibraryTree({
             }
             level={level + 1}
             pageItem={bookFirstPageItem}
+            onContentCreated={handleContentCreated}
             onContentChanged={onContentChanged}
+            onContentMoved={onContentMoved}
           />
         ) : null}
         {shouldRenderChildren ? (

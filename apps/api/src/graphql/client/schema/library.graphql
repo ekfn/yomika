@@ -150,6 +150,14 @@ input CreateFolderInput {
   parentPath: String
 }
 
+input UpdateFolderInput {
+  name: String!
+}
+
+input MoveFolderInput {
+  targetParentPath: String
+}
+
 input CreateBookInput {
   name: String!
   parentPath: String
@@ -160,6 +168,10 @@ input CreateBookInput {
 input UpdateBookInput {
   name: String
   settings: BookSettingsInput
+}
+
+input MoveBookInput {
+  targetParentPath: String
 }
 
 input CreatePageInput {
@@ -174,6 +186,10 @@ input UpdatePageInput {
   ocrStatus: OcrStatus
   aiProcessingStatus: AiProcessingStatus
   settings: PageSettingsInput
+}
+
+input MovePageInput {
+  targetParentPath: String
 }
 
 input OverwritePageSourceImageInput {
@@ -218,10 +234,14 @@ extend type Query {
 
 extend type Mutation {
   createFolder(input: CreateFolderInput!): Folder!
+  updateFolder(path: String!, input: UpdateFolderInput!): Folder!
+  moveFolder(path: String!, input: MoveFolderInput!): Folder!
   createBook(input: CreateBookInput!): Book!
   updateBook(path: String!, input: UpdateBookInput!): Book!
+  moveBook(path: String!, input: MoveBookInput!): Book!
   createPage(input: CreatePageInput!): Page!
   updatePage(path: String!, input: UpdatePageInput!): Page!
+  movePage(path: String!, input: MovePageInput!): Page!
   overwritePageSourceImage(
     path: String!
     input: OverwritePageSourceImageInput!

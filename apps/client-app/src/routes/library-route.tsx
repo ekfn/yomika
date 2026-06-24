@@ -1,4 +1,5 @@
 import { FolderIcon } from "lucide-react";
+import { useQuery } from "@apollo/client/react";
 import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ErrorState } from "@/components/common/error-state";
@@ -8,6 +9,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { RefreshButton } from "@/components/common/refresh-button";
 import { LibraryTree } from "@/features/library/components/library-tree";
 import { useLibraryFolderContents } from "@/features/library/hooks/use-library-folder-contents";
+import { RunnerState, RunnerStatusDocument } from "@/graphql/generated/graphql";
 
 export function LibraryRoute() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,6 +22,9 @@ export function LibraryRoute() {
     loadFolderContents,
     refreshLoadedFolderContents,
   } = useLibraryFolderContents({ targetFolderPath });
+  const runnerStatusQuery = useQuery(RunnerStatusDocument);
+  const isRunnerRunning =
+    runnerStatusQuery.data?.runnerStatus.state === RunnerState.Running;
 
   const handleRefresh = useCallback(async () => {
     await refreshLoadedFolderContents();
@@ -39,6 +44,13 @@ export function LibraryRoute() {
       await refreshLoadedFolderContents(
         parentPath === undefined ? [] : [parentPath],
       );
+    },
+    [refreshLoadedFolderContents],
+  );
+
+  const handleContentMoved = useCallback(
+    async (parentPaths: readonly (string | null)[]) => {
+      await refreshLoadedFolderContents(parentPaths);
     },
     [refreshLoadedFolderContents],
   );
@@ -84,10 +96,12 @@ export function LibraryRoute() {
         <LibraryTree
           books={libraryTreeData.books}
           folders={libraryTreeData.folders}
+          isRunnerRunning={isRunnerRunning}
           pages={libraryTreeData.pages}
           loadingFolderPaths={loadingFolderPaths}
           targetFolderPath={targetFolderPath}
           onContentChanged={handleContentChanged}
+          onContentMoved={handleContentMoved}
           onFolderContentsRequested={loadFolderContents}
           onFoldersChanged={handleFoldersChanged}
           onTargetFolderOpened={handleTargetFolderOpened}

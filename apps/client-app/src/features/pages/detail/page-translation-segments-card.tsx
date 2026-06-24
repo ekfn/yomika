@@ -215,6 +215,26 @@ export function PageTranslationSegmentsCard({
                     type="button"
                     variant="outline"
                     size="icon-sm"
+                    aria-pressed={showVocabulary}
+                    aria-label={
+                      showVocabulary ? "Hide vocabulary" : "Show vocabulary"
+                    }
+                    className="aria-pressed:bg-secondary aria-pressed:text-secondary-foreground"
+                    onClick={toggleVocabulary}
+                  >
+                    <CaptionsIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={8}>
+                  {showVocabulary ? "Hide vocabulary" : "Show vocabulary"}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
                     disabled={!hasVisibleTranslations}
                     aria-pressed={areAllTranslationsVisible}
                     aria-label={
@@ -232,26 +252,6 @@ export function PageTranslationSegmentsCard({
                   {areAllTranslationsVisible
                     ? "Collapse all translations"
                     : "Expand all translations"}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    aria-pressed={showVocabulary}
-                    aria-label={
-                      showVocabulary ? "Hide vocabulary" : "Show vocabulary"
-                    }
-                    className="aria-pressed:bg-secondary aria-pressed:text-secondary-foreground"
-                    onClick={toggleVocabulary}
-                  >
-                    <CaptionsIcon />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" sideOffset={8}>
-                  {showVocabulary ? "Hide vocabulary" : "Show vocabulary"}
                 </TooltipContent>
               </Tooltip>
             </div>

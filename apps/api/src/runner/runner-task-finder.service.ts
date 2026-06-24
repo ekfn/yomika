@@ -25,25 +25,46 @@ type AiProcessingTaskConfig = {
   labelPrefix: string;
 };
 
+const CLAIMABLE_BOOK_IMPORT_STATUSES = new Set<
+  BookRecord["book"]["importStatus"]
+>(["PENDING", "IMPORTING"]);
+
+const CLAIMABLE_OCR_STATUSES = new Set<PageRecord["page"]["ocrStatus"]>([
+  "PENDING",
+  "PROCESSING",
+]);
+
+const CLEAN_UP_TASK_CONFIG = {
+  type: "CLEAN_UP",
+  labelPrefix: "Clean up OCR text",
+} satisfies AiProcessingTaskConfig;
+
+const SPLIT_TASK_CONFIG = {
+  type: "SPLIT",
+  labelPrefix: "Split text",
+} satisfies AiProcessingTaskConfig;
+
+const TRANSLATION_TASK_CONFIG = {
+  type: "TRANSLATION",
+  labelPrefix: "Translate text",
+} satisfies AiProcessingTaskConfig;
+
+const VOCABULARY_TASK_CONFIG = {
+  type: "VOCABULARY",
+  labelPrefix: "Extract vocabulary",
+} satisfies AiProcessingTaskConfig;
+
 const AI_PROCESSING_TASKS_BY_STATUS: Partial<
   Record<PageRecord["page"]["aiProcessingStatus"], AiProcessingTaskConfig>
 > = {
-  CLEAN_UP_PENDING: {
-    type: "CLEAN_UP",
-    labelPrefix: "Clean up OCR text",
-  },
-  SPLIT_PENDING: {
-    type: "SPLIT",
-    labelPrefix: "Split text",
-  },
-  TRANSLATION_PENDING: {
-    type: "TRANSLATION",
-    labelPrefix: "Translate text",
-  },
-  VOCABULARY_PENDING: {
-    type: "VOCABULARY",
-    labelPrefix: "Extract vocabulary",
-  },
+  CLEAN_UP_PENDING: CLEAN_UP_TASK_CONFIG,
+  CLEAN_UP_PROCESSING: CLEAN_UP_TASK_CONFIG,
+  SPLIT_PENDING: SPLIT_TASK_CONFIG,
+  SPLITTING: SPLIT_TASK_CONFIG,
+  TRANSLATION_PENDING: TRANSLATION_TASK_CONFIG,
+  TRANSLATING: TRANSLATION_TASK_CONFIG,
+  VOCABULARY_PENDING: VOCABULARY_TASK_CONFIG,
+  VOCABULARY_PROCESSING: VOCABULARY_TASK_CONFIG,
 };
 
 const AI_PROCESSING_OPERATION_BY_TASK_TYPE = {
@@ -95,7 +116,9 @@ export class RunnerTaskFinderService {
 
   private buildBookImportTasks(bookRecords: BookRecord[]): RunnerTask[] {
     return bookRecords
-      .filter((record) => record.book.importStatus === "PENDING")
+      .filter((record) =>
+        CLAIMABLE_BOOK_IMPORT_STATUSES.has(record.book.importStatus),
+      )
       .map((record) => ({
         type: "BOOK_IMPORT",
         bookPath: record.path,
@@ -106,7 +129,7 @@ export class RunnerTaskFinderService {
 
   private buildOcrTasks(pageRecords: PageRecord[]): RunnerTask[] {
     return pageRecords
-      .filter((record) => record.page.ocrStatus === "PENDING")
+      .filter((record) => CLAIMABLE_OCR_STATUSES.has(record.page.ocrStatus))
       .map((record) => ({
         type: "OCR",
         bookPath: record.bookPath,

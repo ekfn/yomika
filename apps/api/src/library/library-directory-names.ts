@@ -9,11 +9,22 @@ function normalizeLibraryPath(path: string): string {
     .join("/");
 }
 
-function getLibraryPathBasename(path: string): string {
+export function getLibraryPathBasename(path: string): string {
   const normalizedPath = normalizeLibraryPath(path);
   const parts = normalizedPath.split("/");
 
   return parts.at(-1) ?? "";
+}
+
+export function getLibraryPathParent(path: string): string | null {
+  const normalizedPath = normalizeLibraryPath(path);
+  const parts = normalizedPath.split("/");
+
+  if (parts.length <= 1) {
+    return null;
+  }
+
+  return parts.slice(0, -1).join("/");
 }
 
 function isBookDirectoryName(name: string): boolean {
@@ -42,6 +53,24 @@ export function getBookDisplayName(path: string): string {
 
 export function getPageDisplayName(path: string): string {
   return stripPageDirectoryPrefix(getLibraryPathBasename(path));
+}
+
+export function getFolderDisplayName(path: string): string {
+  return getLibraryPathBasename(path);
+}
+
+export function isSameOrDescendantPath(
+  path: string,
+  possibleAncestorPath: string,
+): boolean {
+  const normalizedPath = normalizeLibraryPath(path);
+  const normalizedPossibleAncestorPath =
+    normalizeLibraryPath(possibleAncestorPath);
+
+  return (
+    normalizedPath === normalizedPossibleAncestorPath ||
+    normalizedPath.startsWith(`${normalizedPossibleAncestorPath}/`)
+  );
 }
 
 export function validatePlainDirectoryName(name: string): string | null {

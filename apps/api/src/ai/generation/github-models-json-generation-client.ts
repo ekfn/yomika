@@ -11,6 +11,7 @@ import type {
 } from "./ai-json-generation-client";
 
 const GITHUB_MODELS_ENDPOINT = "https://models.github.ai/inference";
+const GITHUB_MODELS_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class GithubModelsJsonGenerationClient implements AiProviderJsonGenerationClient {
@@ -39,27 +40,34 @@ export class GithubModelsJsonGenerationClient implements AiProviderJsonGeneratio
       responseFormatParameters.json_schema,
     );
 
-    const response = await client.path("/chat/completions").post({
-      body: {
-        ...parameters,
-        model: modelConfig.modelId,
-        messages: [
-          {
-            role: "user",
-            content: input.prompt,
-          },
-        ],
-        response_format: {
-          ...responseFormatParameters,
-          type: "json_schema",
-          json_schema: {
-            ...jsonSchemaParameters,
-            name: `${input.operation}_response`,
-            schema: input.responseJsonSchema as Record<string, unknown>,
-            strict: true,
+    const abortController = new AbortController();
+    const response = await withGithubModelsTimeout({
+      input,
+      modelConfig,
+      abortController,
+      request: client.path("/chat/completions").post({
+        abortSignal: abortController.signal,
+        body: {
+          ...parameters,
+          model: modelConfig.modelId,
+          messages: [
+            {
+              role: "user",
+              content: input.prompt,
+            },
+          ],
+          response_format: {
+            ...responseFormatParameters,
+            type: "json_schema",
+            json_schema: {
+              ...jsonSchemaParameters,
+              name: `${input.operation}_response`,
+              schema: input.responseJsonSchema as Record<string, unknown>,
+              strict: true,
+            },
           },
         },
-      },
+      }),
     });
 
     if (isUnexpected(response)) {
@@ -84,6 +92,54 @@ export class GithubModelsJsonGenerationClient implements AiProviderJsonGeneratio
 
     return JSON.parse(content) as unknown;
   }
+}
+
+async function withGithubModelsTimeout<T>(input: {
+  input: AiJsonGenerationInput;
+  modelConfig: AiGenerationModelConfig;
+  abortController: AbortController;
+  request: PromiseLike<T>;
+}): Promise<T> {
+  let didTimeout = false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutError = new AiProviderRateLimitError(
+    `GitHub Models ${input.input.operationName} timed out after ${formatDuration(
+      GITHUB_MODELS_REQUEST_TIMEOUT_MS,
+    )} for ${input.modelConfig.modelId}. Treating the model as exhausted for this runner run.`,
+  );
+  const guardedRequest = Promise.resolve(input.request).catch(
+    (error: unknown) => {
+      if (didTimeout || isAbortError(error)) {
+        throw timeoutError;
+      }
+
+      throw error;
+    },
+  );
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      didTimeout = true;
+      input.abortController.abort();
+      reject(timeoutError);
+    }, GITHUB_MODELS_REQUEST_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([guardedRequest, timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  );
+}
+
+function formatDuration(durationMs: number): string {
+  return `${Math.round(durationMs / 1000)} seconds`;
 }
 
 function formatGithubModelsError(error: unknown): string {

@@ -8,6 +8,14 @@ type CreateFolderInput = {
   parentPath?: string | null;
 };
 
+type UpdateFolderInput = {
+  name: string;
+};
+
+type MoveFolderInput = {
+  targetParentPath?: string | null;
+};
+
 @Resolver()
 @UseGuards(AuthGuard)
 export class FoldersResolver {
@@ -26,5 +34,21 @@ export class FoldersResolver {
   @Mutation("createFolder")
   createFolder(@Args("input") input: CreateFolderInput): Promise<FolderOutput> {
     return this.foldersService.createFolder(input);
+  }
+
+  @Mutation("updateFolder")
+  updateFolder(
+    @Args("path") path: string,
+    @Args("input") input: UpdateFolderInput,
+  ): Promise<FolderOutput> {
+    return this.foldersService.updateFolder(path, input);
+  }
+
+  @Mutation("moveFolder")
+  moveFolder(
+    @Args("path") path: string,
+    @Args("input") input: MoveFolderInput,
+  ): Promise<FolderOutput> {
+    return this.foldersService.moveFolder(path, input);
   }
 }

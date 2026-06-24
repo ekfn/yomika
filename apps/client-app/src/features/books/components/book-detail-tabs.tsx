@@ -100,10 +100,12 @@ function BookNoPagesEmpty() {
 }
 
 function BookPageSection({
+  isRunnerRunning,
   page,
   children,
   onPageChanged,
 }: {
+  isRunnerRunning: boolean;
   page: BookPage;
   children: ReactNode;
   onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
@@ -129,6 +131,7 @@ function BookPageSection({
           <PageActionsMenu
             name={pageTitle}
             page={page}
+            isRunnerRunning={isRunnerRunning}
             onCompleted={onPageChanged}
           />
         </div>
@@ -144,11 +147,13 @@ function BookPageSection({
 }
 
 function BookOcrTab({
+  isRunnerRunning,
   pages,
   selectedBlockIdsByPagePath,
   onSelectBlock,
   onPageChanged,
 }: {
+  isRunnerRunning: boolean;
   pages: readonly BookPage[];
   selectedBlockIdsByPagePath: SelectedBlockIdsByPagePath;
   onSelectBlock: (pagePath: string, blockId: string) => void;
@@ -167,6 +172,7 @@ function BookOcrTab({
         return (
           <BookPageSection
             key={page.path}
+            isRunnerRunning={isRunnerRunning}
             page={page}
             onPageChanged={onPageChanged}
           >
@@ -192,11 +198,13 @@ function BookOcrTab({
 }
 
 function BookTranslationTab({
+  isRunnerRunning,
   pages,
   selectedBlockIdsByPagePath,
   onSelectBlock,
   onPageChanged,
 }: {
+  isRunnerRunning: boolean;
   pages: readonly BookPage[];
   selectedBlockIdsByPagePath: SelectedBlockIdsByPagePath;
   onSelectBlock: (pagePath: string, blockId: string) => void;
@@ -214,6 +222,7 @@ function BookTranslationTab({
         return (
           <BookPageSection
             key={page.path}
+            isRunnerRunning={isRunnerRunning}
             page={page}
             onPageChanged={onPageChanged}
           >
@@ -242,9 +251,11 @@ function BookTranslationTab({
 
 export function BookDetailTabs({
   book,
+  isRunnerRunning,
   onPageChanged,
 }: {
   book: BookDetail;
+  isRunnerRunning: boolean;
   onPageChanged?: ((path?: string) => Promise<void> | void) | undefined;
 }) {
   const location = useLocation();
@@ -321,11 +332,16 @@ export function BookDetailTabs({
       </div>
 
       <TabsContent value="info">
-        <BookInfoTab book={book} onPageChanged={onPageChanged} />
+        <BookInfoTab
+          book={book}
+          isRunnerRunning={isRunnerRunning}
+          onPageChanged={onPageChanged}
+        />
       </TabsContent>
 
       <TabsContent value="ocr">
         <BookOcrTab
+          isRunnerRunning={isRunnerRunning}
           pages={book.pages}
           selectedBlockIdsByPagePath={selectedBlockIdsByPagePath}
           onSelectBlock={handleSelectBlock}
@@ -335,6 +351,7 @@ export function BookDetailTabs({
 
       <TabsContent value="translation">
         <BookTranslationTab
+          isRunnerRunning={isRunnerRunning}
           pages={book.pages}
           selectedBlockIdsByPagePath={selectedBlockIdsByPagePath}
           onSelectBlock={handleSelectBlock}

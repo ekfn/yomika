@@ -4,7 +4,10 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import sharp from "sharp";
 import { loadAppConfig } from "@/config/app-config";
 import { FoldersService } from "@/folders/folders.service";
-import { validatePlainDirectoryName } from "@/library/library-directory-names";
+import {
+  getPageDisplayName,
+  validatePlainDirectoryName,
+} from "@/library/library-directory-names";
 import {
   LibraryRepository,
   type PageRecord,
@@ -35,6 +38,10 @@ type UpdatePageInput = {
   ocrStatus?: PageJson["ocrStatus"] | null;
   aiProcessingStatus?: PageJson["aiProcessingStatus"] | null;
   settings?: PageSettingsInput;
+};
+
+type MovePageInput = {
+  targetParentPath?: string | null;
 };
 
 type OverwritePageSourceImageInput = {
@@ -267,10 +274,7 @@ export class PagesService {
         );
 
       if (nextPagePath !== record.path) {
-        outputRecord = await this.libraryRepository.movePage(
-          record.path,
-          nextPagePath,
-        );
+        outputRecord = await this.renamePage(record.path, nextPagePath);
       }
     }
 
@@ -282,6 +286,44 @@ export class PagesService {
       settings: this.mergeSettings(record.page.settings, input.settings, {
         allowNullSettings: Boolean(record.bookPath),
       }),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.libraryRepository.writePage(outputRecord.path, updatedPage);
+
+    return this.toPageOutput(
+      await this.libraryRepository.getPageByPath(outputRecord.path),
+    );
+  }
+
+  async movePage(path: string, input: MovePageInput): Promise<PageOutput> {
+    this.assertRunnerIsIdle();
+
+    const record = await this.libraryRepository.getPageByPath(path);
+
+    if (record.bookPath) {
+      throw new BadRequestException("Book pages cannot be moved separately.");
+    }
+
+    const targetParentPath = input.targetParentPath ?? null;
+
+    await this.foldersService.assertFolderExists(targetParentPath);
+
+    const nextPagePath = this.libraryRepository.getStandalonePagePathForCreate(
+      targetParentPath,
+      getPageDisplayName(record.path),
+    );
+
+    if (nextPagePath === record.path) {
+      return this.toPageOutput(record);
+    }
+
+    const outputRecord = await this.libraryRepository.movePage(
+      record.path,
+      nextPagePath,
+    );
+    const updatedPage: PageJson = {
+      ...record.page,
       updatedAt: new Date().toISOString(),
     };
 
@@ -688,6 +730,27 @@ export class PagesService {
       path: record.path,
       pageNumber: record.page.pageNumber,
     };
+  }
+
+  private assertRunnerIsIdle(): void {
+    if (this.runnerService.getStatus().state === "RUNNING") {
+      throw new BadRequestException(
+        "Wait until the runner finishes or stop it before moving library items.",
+      );
+    }
+  }
+
+  private async renamePage(
+    path: string,
+    nextPath: string,
+  ): Promise<PageRecord> {
+    if (this.runnerService.getStatus().state === "RUNNING") {
+      throw new BadRequestException(
+        "Wait until the runner finishes or stop it before renaming library items.",
+      );
+    }
+
+    return this.libraryRepository.movePage(path, nextPath);
   }
 }
 

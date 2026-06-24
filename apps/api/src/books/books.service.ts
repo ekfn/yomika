@@ -14,6 +14,7 @@ import {
 } from "@/library/library.repository";
 import type { BookJson } from "@/library/library-schemas";
 import { PagesService, type PageOutput } from "@/pages/pages.service";
+import { RunnerStateService } from "@/runner/runner-state.service";
 import { UploadStagingService } from "@/uploads/upload-staging.service";
 
 type BookSettingsInput =
@@ -38,6 +39,10 @@ type UpdateBookInput = {
   settings?: BookSettingsInput;
 };
 
+type MoveBookInput = {
+  targetParentPath?: string | null;
+};
+
 export type BookOutput = {
   path: string;
   sourcePdfUrl: string | null;
@@ -60,6 +65,7 @@ export class BooksService {
     private readonly foldersService: FoldersService,
     private readonly libraryRepository: LibraryRepository,
     private readonly pagesService: PagesService,
+    private readonly runnerState: RunnerStateService,
     private readonly uploadStagingService: UploadStagingService,
   ) {}
 
@@ -143,7 +149,40 @@ export class BooksService {
     const outputRecord =
       nextBookPath === record.path
         ? record
-        : await this.libraryRepository.moveBook(record.path, nextBookPath);
+        : await this.renameBook(record.path, nextBookPath);
+
+    await this.libraryRepository.writeBook(outputRecord.path, updatedBook);
+
+    return this.toBookOutput(
+      await this.libraryRepository.getBookByPath(outputRecord.path),
+    );
+  }
+
+  async moveBook(path: string, input: MoveBookInput): Promise<BookOutput> {
+    this.assertRunnerIsIdle();
+
+    const record = await this.libraryRepository.getBookByPath(path);
+    const targetParentPath = input.targetParentPath ?? null;
+
+    await this.foldersService.assertFolderExists(targetParentPath);
+
+    const nextBookPath = this.libraryRepository.getBookPathForCreate(
+      targetParentPath,
+      getBookDisplayName(record.path),
+    );
+
+    if (nextBookPath === record.path) {
+      return this.toBookOutput(record);
+    }
+
+    const outputRecord = await this.libraryRepository.moveBook(
+      record.path,
+      nextBookPath,
+    );
+    const updatedBook: BookJson = {
+      ...record.book,
+      updatedAt: new Date().toISOString(),
+    };
 
     await this.libraryRepository.writeBook(outputRecord.path, updatedBook);
 
@@ -276,6 +315,27 @@ export class BooksService {
         input?.aiProcessingEnabled ?? base.aiProcessingEnabled,
       vocabularyEnabled: input?.vocabularyEnabled ?? base.vocabularyEnabled,
     };
+  }
+
+  private assertRunnerIsIdle(): void {
+    if (this.runnerState.isRunning()) {
+      throw new BadRequestException(
+        "Wait until the runner finishes or stop it before moving library items.",
+      );
+    }
+  }
+
+  private async renameBook(
+    path: string,
+    nextPath: string,
+  ): Promise<BookRecord> {
+    if (this.runnerState.isRunning()) {
+      throw new BadRequestException(
+        "Wait until the runner finishes or stop it before renaming library items.",
+      );
+    }
+
+    return this.libraryRepository.moveBook(path, nextPath);
   }
 }
 

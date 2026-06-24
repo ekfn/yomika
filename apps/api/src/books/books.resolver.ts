@@ -25,6 +25,10 @@ type UpdateBookInput = {
   } | null;
 };
 
+type MoveBookInput = {
+  targetParentPath?: string | null;
+};
+
 @Resolver()
 @UseGuards(AuthGuard)
 export class BooksResolver {
@@ -53,5 +57,13 @@ export class BooksResolver {
     @Args("input") input: UpdateBookInput,
   ): Promise<BookOutput> {
     return this.booksService.updateBook(path, input);
+  }
+
+  @Mutation("moveBook")
+  moveBook(
+    @Args("path") path: string,
+    @Args("input") input: MoveBookInput,
+  ): Promise<BookOutput> {
+    return this.booksService.moveBook(path, input);
   }
 }

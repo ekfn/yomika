@@ -24,12 +24,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui";
+import { GuardedDropdownMenuItem } from "@/components/common/guarded-dropdown-menu-item";
 import { PageAiStatusDialog } from "@/features/pages/components/page-ai-status-dialog";
-import { PageFormDialog } from "@/features/pages/components/page-form-dialog";
+import { PageOptionsDialog } from "@/features/pages/components/page-options-dialog";
+import { PageRenameDialog } from "@/features/pages/components/page-rename-dialog";
 import { PageSiblingNav } from "@/features/pages/components/page-sibling-nav";
 import { PageDetailTabs } from "@/features/pages/detail/page-detail-tabs";
 import { PageImageEditDialog } from "@/features/pages/image-editor/page-image-edit-dialog";
-import { PageDocument, type PageQuery } from "@/graphql/generated/graphql";
+import {
+  PageDocument,
+  RunnerState,
+  RunnerStatusDocument,
+  type PageQuery,
+} from "@/graphql/generated/graphql";
 import {
   getBookRoute,
   getLibraryFolderRoute,
@@ -62,18 +69,23 @@ export function PageDetailRoute() {
       notifyOnNetworkStatusChange: true,
     },
   );
+  const runnerStatusQuery = useQuery(RunnerStatusDocument);
+  const isRunnerRunning =
+    runnerStatusQuery.data?.runnerStatus.state === RunnerState.Running;
   const visibleData = getVisiblePageData(data, previousData);
   const page = visibleData?.page ?? null;
   const isPageTransitioning = loading && Boolean(page);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [isImageEditDialogOpen, setIsImageEditDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [isOptionsDialogOpen, setIsOptionsDialogOpen] = useState(false);
   const [isAiStatusDialogOpen, setIsAiStatusDialogOpen] = useState(false);
 
   useEffect(() => {
     setSelectedBlockId(null);
     setIsImageEditDialogOpen(false);
-    setIsEditDialogOpen(false);
+    setIsRenameDialogOpen(false);
+    setIsOptionsDialogOpen(false);
     setIsAiStatusDialogOpen(false);
   }, [page?.path]);
 
@@ -182,19 +194,30 @@ export function PageDetailRoute() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuGroup>
+                    {!page.bookPath ? (
+                      <GuardedDropdownMenuItem
+                        disabled={isRunnerRunning}
+                        tooltip="Wait until the runner finishes or stop it before renaming items."
+                        onSelect={() => {
+                          setIsRenameDialogOpen(true);
+                        }}
+                      >
+                        Rename Page
+                      </GuardedDropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem
                       onSelect={() => {
-                        setIsEditDialogOpen(true);
+                        setIsOptionsDialogOpen(true);
                       }}
                     >
-                      Edit Page
+                      Edit Page Options
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => {
                         setIsImageEditDialogOpen(true);
                       }}
                     >
-                      Edit Image
+                      Edit Page Image
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => {
@@ -219,17 +242,26 @@ export function PageDetailRoute() {
           }}
         />
 
-        <PageFormDialog
+        <PageRenameDialog
           page={page}
-          open={isEditDialogOpen}
+          open={isRenameDialogOpen}
           trigger={null}
-          onOpenChange={setIsEditDialogOpen}
+          onOpenChange={setIsRenameDialogOpen}
           onCompleted={async (nextPath) => {
             if (nextPath && nextPath !== page.path) {
               navigate(getPageRoute(nextPath), { replace: true });
               return;
             }
 
+            await refetch();
+          }}
+        />
+        <PageOptionsDialog
+          page={page}
+          open={isOptionsDialogOpen}
+          trigger={null}
+          onOpenChange={setIsOptionsDialogOpen}
+          onCompleted={async () => {
             await refetch();
           }}
         />

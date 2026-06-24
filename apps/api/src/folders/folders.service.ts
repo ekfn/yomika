@@ -1,10 +1,24 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { validatePlainDirectoryName } from "@/library/library-directory-names";
+import {
+  getFolderDisplayName,
+  getLibraryPathParent,
+  isSameOrDescendantPath,
+  validatePlainDirectoryName,
+} from "@/library/library-directory-names";
 import { LibraryRepository } from "@/library/library.repository";
+import { RunnerStateService } from "@/runner/runner-state.service";
 
 type CreateFolderInput = {
   name: string;
   parentPath?: string | null;
+};
+
+type UpdateFolderInput = {
+  name: string;
+};
+
+type MoveFolderInput = {
+  targetParentPath?: string | null;
 };
 
 export type FolderOutput = {
@@ -13,7 +27,10 @@ export type FolderOutput = {
 
 @Injectable()
 export class FoldersService {
-  constructor(private readonly libraryRepository: LibraryRepository) {}
+  constructor(
+    private readonly libraryRepository: LibraryRepository,
+    private readonly runnerState: RunnerStateService,
+  ) {}
 
   async listFolders(parentPath?: string | null): Promise<FolderOutput[]> {
     if (parentPath !== undefined) {
@@ -52,6 +69,68 @@ export class FoldersService {
     );
   }
 
+  async updateFolder(
+    path: string,
+    input: UpdateFolderInput,
+  ): Promise<FolderOutput> {
+    this.assertRunnerIsIdle(
+      "Wait until the runner finishes or stop it before renaming library items.",
+    );
+
+    const record = await this.libraryRepository.getFolderByPath(path);
+    const parentPath = getLibraryPathParent(record.path);
+    const nextFolderPath = this.libraryRepository.getFolderPathForCreate(
+      parentPath,
+      normalizeDirectoryName(input.name),
+    );
+
+    if (nextFolderPath === record.path) {
+      return this.toFolderOutput(record.path);
+    }
+
+    return this.toFolderOutput(
+      (await this.libraryRepository.moveFolder(record.path, nextFolderPath))
+        .path,
+    );
+  }
+
+  async moveFolder(
+    path: string,
+    input: MoveFolderInput,
+  ): Promise<FolderOutput> {
+    this.assertRunnerIsIdle(
+      "Wait until the runner finishes or stop it before moving library items.",
+    );
+
+    const record = await this.libraryRepository.getFolderByPath(path);
+    const targetParentPath = input.targetParentPath ?? null;
+
+    if (
+      targetParentPath &&
+      isSameOrDescendantPath(targetParentPath, record.path)
+    ) {
+      throw new BadRequestException(
+        "Folder cannot be moved into itself or a nested folder.",
+      );
+    }
+
+    await this.assertFolderExists(targetParentPath);
+
+    const nextFolderPath = this.libraryRepository.getFolderPathForCreate(
+      targetParentPath,
+      getFolderDisplayName(record.path),
+    );
+
+    if (nextFolderPath === record.path) {
+      return this.toFolderOutput(record.path);
+    }
+
+    return this.toFolderOutput(
+      (await this.libraryRepository.moveFolder(record.path, nextFolderPath))
+        .path,
+    );
+  }
+
   async assertFolderExists(
     folderPath: string | null | undefined,
   ): Promise<void> {
@@ -64,6 +143,12 @@ export class FoldersService {
 
   private toFolderOutput(path: string): FolderOutput {
     return { path };
+  }
+
+  private assertRunnerIsIdle(message: string): void {
+    if (this.runnerState.isRunning()) {
+      throw new BadRequestException(message);
+    }
   }
 }
 

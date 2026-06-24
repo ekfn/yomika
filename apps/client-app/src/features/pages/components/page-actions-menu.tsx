@@ -1,4 +1,4 @@
-import { type MouseEvent, useState } from "react";
+import { type MouseEvent, type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { MoreHorizontalIcon } from "lucide-react";
 import {
@@ -7,8 +7,10 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui";
+import { GuardedDropdownMenuItem } from "@/components/common/guarded-dropdown-menu-item";
 import type {
   PageListFieldsFragment,
   PageQuery,
@@ -16,7 +18,8 @@ import type {
 import { getPageRoute } from "@/lib/library-paths";
 import { PageImageEditDialog } from "@/features/pages/image-editor/page-image-edit-dialog";
 import { PageAiStatusDialog } from "./page-ai-status-dialog";
-import { PageFormDialog } from "./page-form-dialog";
+import { PageOptionsDialog } from "./page-options-dialog";
+import { PageRenameDialog } from "./page-rename-dialog";
 
 type PageActionsMenuPage = Pick<
   NonNullable<PageQuery["page"]> | PageListFieldsFragment,
@@ -32,6 +35,9 @@ type PageActionsMenuProps = {
   buttonVariant?: "ghost" | "outline";
   name: string;
   page: PageActionsMenuPage;
+  extraDialogs?: ReactNode;
+  extraMenuItems?: ReactNode;
+  isRunnerRunning?: boolean;
   onCompleted?: ((path?: string) => Promise<void> | void) | undefined;
 };
 
@@ -39,11 +45,17 @@ export function PageActionsMenu({
   buttonVariant = "ghost",
   name,
   page,
+  extraDialogs,
+  extraMenuItems,
+  isRunnerRunning = false,
   onCompleted,
 }: PageActionsMenuProps) {
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isImageEditOpen, setIsImageEditOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const canRename = !page.bookPath;
+  const hasSecondaryItems = canRename || Boolean(extraMenuItems);
 
   const handleMenuClick = (event: MouseEvent) => {
     event.stopPropagation();
@@ -70,22 +82,22 @@ export function PageActionsMenu({
                 target="_blank"
                 rel="noreferrer"
               >
-                Open page
+                Open Page
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => {
-                setIsEditOpen(true);
+                setIsOptionsOpen(true);
               }}
             >
-              Edit Page
+              Edit Page Options
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => {
                 setIsImageEditOpen(true);
               }}
             >
-              Edit Image
+              Edit Page Image
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => {
@@ -95,6 +107,25 @@ export function PageActionsMenu({
               Edit Page Status
             </DropdownMenuItem>
           </DropdownMenuGroup>
+          {hasSecondaryItems ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {canRename ? (
+                  <GuardedDropdownMenuItem
+                    disabled={isRunnerRunning}
+                    tooltip="Wait until the runner finishes or stop it before renaming items."
+                    onSelect={() => {
+                      setIsRenameOpen(true);
+                    }}
+                  >
+                    Rename Page
+                  </GuardedDropdownMenuItem>
+                ) : null}
+                {extraMenuItems}
+              </DropdownMenuGroup>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
       <PageImageEditDialog
@@ -103,11 +134,18 @@ export function PageActionsMenu({
         onOpenChange={setIsImageEditOpen}
         {...(onCompleted ? { onCompleted } : {})}
       />
-      <PageFormDialog
-        open={isEditOpen}
+      <PageRenameDialog
+        open={isRenameOpen}
         page={page}
         trigger={null}
-        onOpenChange={setIsEditOpen}
+        onOpenChange={setIsRenameOpen}
+        {...(onCompleted ? { onCompleted } : {})}
+      />
+      <PageOptionsDialog
+        open={isOptionsOpen}
+        page={page}
+        trigger={null}
+        onOpenChange={setIsOptionsOpen}
         {...(onCompleted ? { onCompleted } : {})}
       />
       <PageAiStatusDialog
@@ -116,6 +154,7 @@ export function PageActionsMenu({
         onCompleted={() => onCompleted?.(page.path)}
         onOpenChange={setIsStatusOpen}
       />
+      {extraDialogs}
     </div>
   );
 }
