@@ -124,6 +124,24 @@ function toBlobPart(buffer: Buffer): BlobPart {
   return new Uint8Array(buffer);
 }
 
+function removeInputPathsFromOcrJson<TValue>(value: TValue): TValue {
+  if (Array.isArray(value)) {
+    return value.map(removeInputPathsFromOcrJson) as TValue;
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, nestedValue]) =>
+      key === "input_path"
+        ? []
+        : [[key, removeInputPathsFromOcrJson(nestedValue)]],
+    ),
+  ) as TValue;
+}
+
 function getErrorRecord(error: unknown): Record<string, unknown> | null {
   return typeof error === "object" && error !== null
     ? (error as Record<string, unknown>)
@@ -913,7 +931,6 @@ function createEmptyOcrResult(input: {
           height: input.heightPx,
           layout_det_res: {
             boxes: [],
-            input_path: null,
             page_index: null,
           },
           parsing_res_list: [],
@@ -1118,9 +1135,10 @@ export class PaddleOcrClient {
       result,
       ocrImage.transform,
     );
+    const sanitizedOcrResult = removeInputPathsFromOcrJson(normalizedOcrResult);
 
     if (this.config.ocrProfile === "fast") {
-      return normalizedOcrResult;
+      return sanitizedOcrResult;
     }
 
     const imageBlockTextByExternalBlockId = await recognizeImageBlockText({
@@ -1129,12 +1147,14 @@ export class PaddleOcrClient {
       sourceImagePath,
       sourceImageWidthPx: metadata.widthPx,
       sourceImageHeightPx: metadata.heightPx,
-      ocrRawJson: normalizedOcrResult,
+      ocrRawJson: sanitizedOcrResult,
     });
 
-    return applyOcrBlockContentOverridesToRawJson(
-      normalizedOcrResult,
-      imageBlockTextByExternalBlockId,
+    return removeInputPathsFromOcrJson(
+      applyOcrBlockContentOverridesToRawJson(
+        sanitizedOcrResult,
+        imageBlockTextByExternalBlockId,
+      ),
     );
   }
 }
