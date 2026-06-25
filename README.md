@@ -21,21 +21,21 @@ translation segments, translations, and vocabulary.
 2. OCR analyzes the source image and detects text blocks with their positions on
    the page. After this step, the page can display detected OCR regions over the
    image and the raw OCR block data.
-3. Cleanup sends the OCR blocks to AI and asks it to fix recognition errors,
+3. Cleanup sends the OCR blocks to LLM and asks it to fix recognition errors,
    normalize the text, and produce clean page blocks. After this step, the page
    has readable cleaned blocks that are better suited for splitting and
    translation.
-4. Split sends the cleaned block text to AI and divides it into smaller source
+4. Split sends the cleaned block text to LLM and divides it into smaller source
    segments. After this step, each block has segment rows that can be reviewed,
    edited, and translated independently.
-5. Translation sends the source segments to AI and fills in translations and
+5. Translation sends the source segments to LLM and fills in translations and
    reading-aware text. After this step, the translation view shows the original
    segment text, the reading view, and the translated text.
 6. Vocabulary runs after translation when vocabulary is enabled for the book or
    page. After this step, translated segments can show vocabulary entries with
    readings and translations.
 
-If AI processing is disabled for a book or page, the AI steps are skipped.
+If AI processing is disabled for a book or page, the LLM steps are skipped.
 
 ## Library Files
 
@@ -72,6 +72,28 @@ The app serves these files from the library for display in the UI.
 
 ## Install
 
+Clone the repository into the directory where you want to keep the app:
+
+```bash
+git clone https://github.com/<owner>/yomika.git
+cd yomika
+```
+
+Enable pnpm through Corepack:
+
+```bash
+corepack enable pnpm
+```
+
+Run this once after installing Node.js. On Windows, if the command fails with a
+permission error, run the terminal as Administrator and repeat it.
+
+Install dependencies:
+
+```bash
+pnpm install
+```
+
 Create a local `.env` file from `.env.example`:
 
 ```bash
@@ -89,12 +111,6 @@ Edit `.env` before starting the app. At minimum, set:
 
 `OCR_PROFILE` is optional. Use `full` for the most complete OCR flow. Use `fast`
 to skip extra OCR passes.
-
-Install dependencies:
-
-```bash
-pnpm install
-```
 
 Install the local OCR runtime:
 
