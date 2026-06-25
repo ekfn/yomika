@@ -22,7 +22,6 @@ Provide each source text with inline readings and translate into \`${input.conte
 - Return every target segment exactly once.
 - \`translation\` is the natural translation of the segment's whole \`text\` into \`${input.context.targetLanguage}\` language.
 - Do not add comments or meta text into translation.
-- Do not convert kana-only words into kanji. 
 - \`textWithReading\` must preserve the whole segment \`text\` and add readings inline where useful; do not change the source text.
 - For Japanese, keep kana and punctuation as in the source text, annotate kanji-containing chunks as \`漢字（かんじ）\`, and write readings in hiragana.
 - Keep okurigana outside the annotation when it can be naturally separated: \`受（う）けました\`, \`授（さず）けてください\`, \`小（ちい）さな\`.
@@ -53,7 +52,6 @@ ouput:
 - Putting anything except the translation into \`translation\`.
 - Using ASCII parentheses \`()\` instead of full-width parentheses \`（\` and \`）\`.
 - \`textWithReading\` without readings does not match the source \`text\`.
-- Converting kana to kanji while adding readings.
 
 ## Target Segments
 
