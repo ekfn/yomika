@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { z } from "zod";
 
@@ -50,6 +51,7 @@ const envSchema = z.object({
 export type OcrProfile = z.infer<typeof ocrProfileEnvSchema>;
 
 export type AppConfig = {
+  appVersion: string;
   appPassword: string;
   sessionSecret: string;
   apiPort: number;
@@ -84,6 +86,7 @@ export function loadAppConfig(projectRoot = findProjectRoot()): AppConfig {
   }
 
   return {
+    appVersion: loadPackageVersion(projectRoot),
     appPassword: env.APP_PASSWORD,
     sessionSecret: env.SESSION_SECRET,
     apiPort: env.API_PORT,
@@ -110,6 +113,17 @@ export function loadAppConfig(projectRoot = findProjectRoot()): AppConfig {
     geminiApiKey: env.GEMINI_API_KEY,
     githubModelsToken: env.GITHUB_MODELS_TOKEN,
   };
+}
+
+function loadPackageVersion(projectRoot: string): string {
+  const packageJsonPath = resolve(projectRoot, "package.json");
+  const parsedPackageJson = z
+    .object({
+      version: z.string().min(1),
+    })
+    .parse(JSON.parse(readFileSync(packageJsonPath, "utf8")));
+
+  return parsedPackageJson.version;
 }
 
 function resolveMaybeRelative(projectRoot: string, path: string): string {

@@ -13,7 +13,11 @@ import {
 } from "react";
 import { useQuery } from "@apollo/client/react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { RunnerState, RunnerStatusDocument } from "@/graphql/generated/graphql";
+import {
+  AppInfoDocument,
+  RunnerState,
+  RunnerStatusDocument,
+} from "@/graphql/generated/graphql";
 import { cn } from "@/lib/utils";
 import {
   Button,
@@ -180,6 +184,12 @@ function ClientShellNavIcon({
   );
 }
 
+function getClientShellLogoLabel(version: string | null) {
+  return version
+    ? `${CLIENT_SHELL_LOGO.label} (v${version})`
+    : CLIENT_SHELL_LOGO.label;
+}
+
 export function ClientShell({
   children,
   currentUserLabel,
@@ -192,8 +202,11 @@ export function ClientShell({
     pollInterval: 2000,
     skipPollAttempt: () => document.visibilityState !== "visible",
   });
+  const { data: appInfoData } = useQuery(AppInfoDocument);
   const LogoIcon = CLIENT_SHELL_LOGO.Icon;
   const logoutLabel = isSigningOut ? "Signing out..." : "Sign out";
+  const appVersion = appInfoData?.appInfo.version ?? null;
+  const logoLabel = getClientShellLogoLabel(appVersion);
   const runnerMenuStatus = getClientShellRunnerMenuStatus(
     runnerStatusData?.runnerStatus.state,
   );
@@ -225,7 +238,7 @@ export function ClientShell({
       <header className="flex h-14 items-center justify-between border-b border-stone-200 bg-white px-4 lg:hidden">
         <Link
           to={CLIENT_SHELL_LOGO.to}
-          aria-label={CLIENT_SHELL_LOGO.label}
+          aria-label={logoLabel}
           className="flex min-w-0 items-center gap-2 text-stone-950"
         >
           <LogoIcon className="size-6 shrink-0" aria-hidden="true" />
@@ -249,9 +262,7 @@ export function ClientShell({
             <DialogHeader>
               <DialogTitle className="flex min-w-0 items-center gap-2">
                 <LogoIcon className="size-6 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 truncate">
-                  {CLIENT_SHELL_LOGO.label}
-                </span>
+                <span className="min-w-0 truncate">{logoLabel}</span>
               </DialogTitle>
               <p className="truncate text-sm text-muted-foreground">
                 {currentUserLabel}
@@ -320,10 +331,10 @@ export function ClientShell({
       <div className="lg:flex lg:min-h-screen">
         <aside className={clientShellAsideClasses}>
           {withCollapsedTooltip(
-            CLIENT_SHELL_LOGO.label,
+            logoLabel,
             <Link
               to={CLIENT_SHELL_LOGO.to}
-              aria-label={CLIENT_SHELL_LOGO.label}
+              aria-label={logoLabel}
               className={cn(clientShellNavItemClasses, "text-stone-950")}
             >
               <LogoIcon className="size-6 shrink-0" aria-hidden="true" />

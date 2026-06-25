@@ -1,6 +1,11 @@
 scalar DateTime
 
+type AppInfo {
+  version: String!
+}
+
 type Query {
+  appInfo: AppInfo!
   health: String!
 }
 

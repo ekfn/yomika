@@ -78,6 +78,10 @@ input AiProcessingStepModelConfigInput {
   provider: AiModelProvider!
 }
 
+type AppInfo {
+  version: String!
+}
+
 type Book {
   createdAt: DateTime!
   firstPage: Page
@@ -272,6 +276,7 @@ type PageSibling {
 
 type Query {
   aiProcessingConfig: AiProcessingConfig!
+  appInfo: AppInfo!
   book(path: String!): Book!
   books(parentPath: String): [Book!]!
   currentUser: CurrentUser

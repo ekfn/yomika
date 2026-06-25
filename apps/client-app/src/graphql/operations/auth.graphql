@@ -5,6 +5,12 @@ query CurrentUser {
   }
 }
 
+query AppInfo {
+  appInfo {
+    version
+  }
+}
+
 mutation Login($input: LoginInput!) {
   login(input: $input) {
     id

@@ -3,6 +3,10 @@ import { Query, Resolver } from "@nestjs/graphql";
 import { AuthGuard } from "@/auth/auth.guard";
 import { loadAppConfig } from "./app-config";
 
+type AppInfoOutput = {
+  version: string;
+};
+
 type LibrarySettingsDefaultsOutput = {
   translationSourceLanguages: string[];
   translationTargetLanguage: string;
@@ -14,6 +18,13 @@ type LibrarySettingsDefaultsOutput = {
 @UseGuards(AuthGuard)
 export class AppConfigResolver {
   private readonly config = loadAppConfig();
+
+  @Query("appInfo")
+  appInfo(): AppInfoOutput {
+    return {
+      version: this.config.appVersion,
+    };
+  }
 
   @Query("librarySettingsDefaults")
   librarySettingsDefaults(): LibrarySettingsDefaultsOutput {
