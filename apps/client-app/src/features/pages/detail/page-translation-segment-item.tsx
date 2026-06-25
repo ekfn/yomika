@@ -50,6 +50,8 @@ type TranslationSegmentTranslationDetailsProps = {
   translation: string;
 };
 
+const VOCABULARY_POPOVER_DESKTOP_MEDIA_QUERY = "(min-width: 640px)";
+
 function TranslationSegmentTranslationDetails({
   translation,
 }: TranslationSegmentTranslationDetailsProps) {
@@ -97,6 +99,24 @@ function TranslationSegmentVocabularyDetails({
   );
 }
 
+function useVocabularyPopoverSide() {
+  const [side, setSide] = useState<"bottom" | "left">("bottom");
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(
+      VOCABULARY_POPOVER_DESKTOP_MEDIA_QUERY,
+    );
+    const updateSide = () => setSide(mediaQuery.matches ? "left" : "bottom");
+
+    updateSide();
+    mediaQuery.addEventListener("change", updateSide);
+
+    return () => mediaQuery.removeEventListener("change", updateSide);
+  }, []);
+
+  return side;
+}
+
 export function PageTranslationSegmentItem({
   analysisMode,
   blockId,
@@ -112,6 +132,7 @@ export function PageTranslationSegmentItem({
   );
   const [isVocabularyOpen, setIsVocabularyOpen] = useState(false);
   const lastPointerTypeRef = useRef<string | null>(null);
+  const vocabularyPopoverSide = useVocabularyPopoverSide();
   const translation = segment.translation?.trim();
   const hasVocabulary = segment.vocabulary.length > 0;
   const vocabularyColorStyle = getTranslationSegmentAnalysisColorStyle(
@@ -322,11 +343,11 @@ export function PageTranslationSegmentItem({
       </PopoverAnchor>
       {showVocabulary && hasVocabulary ? (
         <PopoverContent
-          align="start"
-          side="left"
+          align={vocabularyPopoverSide === "left" ? "start" : "center"}
+          side={vocabularyPopoverSide}
           sideOffset={10}
           style={vocabularyColorStyle}
-          className="max-h-(--radix-popover-content-available-height) w-80 max-w-[calc(100vw-2rem)] overflow-y-auto border-r-2 border-r-(--translation-segment-color)"
+          className="max-h-(--radix-popover-content-available-height) w-80 max-w-[calc(100vw-2rem)] overflow-y-auto border-(--translation-segment-color) data-[side=bottom]:border-t-2 data-[side=left]:border-r-2 data-[side=top]:border-b-2"
         >
           <TranslationSegmentVocabularyDetails segment={segment} />
         </PopoverContent>
